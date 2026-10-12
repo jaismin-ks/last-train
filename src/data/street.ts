@@ -65,7 +65,11 @@ export const HAZE = {
 }
 
 /** Sidewalk top is 0.15 m above the road; eyes ~1.6 m above that. Real scale. */
-export const EYE_HEIGHT = 0.15 + 1.6
+export const EYE_ABOVE_FLOOR = 1.6
+export const EYE_HEIGHT = 0.15 + EYE_ABOVE_FLOOR
+
+/** Street walking route with floor heights, [x, floorY, z] (three.js). */
+export const STREET_ROUTE = markers.route as V3[]
 
 /** Walking route as [x, z] (three.js). */
 export const ROUTE = (markers.route as V3[]).map(([x, , z]) => [x, z] as [number, number])

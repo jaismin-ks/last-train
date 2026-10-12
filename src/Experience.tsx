@@ -13,7 +13,7 @@ import { LocationCard } from './ui/LocationCard'
 import { PauseMenu } from './ui/PauseMenu'
 import { useEffect, useRef } from 'react'
 import type { RootState } from '@react-three/fiber'
-import { PlatformPlaceholder } from './scenes/PlatformPlaceholder'
+import { Station } from './scenes/Station'
 
 /** The phone scene happens far below the street, hidden in the black fog. */
 const PHONE_RIG_Y = -300
@@ -49,7 +49,7 @@ export function Experience() {
       {/* Own boundary, so the phone never blanks out while the street finishes loading */}
       <Suspense fallback={null}>
         {showStreet && <Descent />}
-        {phase === 'platform' && <PlatformPlaceholder />}
+        {phase === 'platform' && <Station />}
       </Suspense>
     </Canvas>
     <Caption />

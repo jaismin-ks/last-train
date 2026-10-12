@@ -11,6 +11,9 @@ export const CAPTIONS = {
     reply: { text: 'Reply to Mom', sub: 'Tap the message field' },
     sendReply: { text: 'Send it', sub: 'Tap the send button' },
   },
+  station: {
+    findPlatform: { text: 'Find your platform', sub: 'Hold W to walk  ·  S to step back' },
+  },
   street: {
     // shown once when you land, like a film chapter heading
     location: { time: '11:58 PM', place: '25 St.' },

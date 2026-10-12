@@ -68,3 +68,37 @@ export function stopAmbience(fadeMs = 1400) {
     if (!ambienceOn) ambience.stop()
   })
 }
+
+/** Escalator motor hum: one loop whose volume follows distance to the nearest running escalator. */
+const escalator = new Howl({ src: ['/assets/audio/sfx/escalator-loop.mp3'], volume: 0, loop: true, preload: true })
+let escalatorOn = false
+export function setEscalatorVolume(volume: number) {
+  if (volume > 0.001 && !escalatorOn) {
+    escalatorOn = true
+    escalator.play()
+  }
+  if (escalatorOn) escalator.volume(volume)
+}
+export function stopEscalator() {
+  escalatorOn = false
+  escalator.stop()
+}
+
+/** Station ambience: low background bed while you're underground. */
+const STATION_AMBIENCE_VOLUME = 0.14
+const stationAmbience = new Howl({ src: ['/assets/audio/ambience/station.mp3'], volume: 0, loop: true, preload: true })
+let stationOn = false
+export function startStationAmbience(fadeMs = 2500) {
+  if (stationOn) return
+  stationOn = true
+  stationAmbience.play()
+  stationAmbience.fade(0, STATION_AMBIENCE_VOLUME, fadeMs)
+}
+export function stopStationAmbience(fadeMs = 1000) {
+  stationOn = false
+  if (!stationAmbience.playing()) return
+  stationAmbience.fade(stationAmbience.volume() as number, 0, fadeMs)
+  stationAmbience.once('fade', () => {
+    if (!stationOn) stationAmbience.stop()
+  })
+}
