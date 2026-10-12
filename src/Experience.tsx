@@ -9,7 +9,7 @@ export function Experience() {
   const phase = useGame((s) => s.phase)
 
   return (
-    <Canvas camera={{ position: [0, 0, 0.6], fov: 35 }} dpr={[1, 2]}>
+    <Canvas camera={{ position: [0, 0, 0.32], fov: 35, near: 0.01 }} dpr={[1, 2]}>
       <color attach="background" args={['#000']} />
       <Suspense fallback={null}>
         {phase === 'phoneIntro' && (
