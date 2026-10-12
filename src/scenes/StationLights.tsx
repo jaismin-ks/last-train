@@ -1,4 +1,5 @@
 import { useMemo, useRef } from 'react'
+import { useGame } from '../store'
 import { useFrame } from '@react-three/fiber'
 import type { PointLight } from 'three'
 
@@ -34,7 +35,7 @@ export const STATION_LIGHT = {
     [-15.5, 1.2, 12.24],
     [-22.5, -1.6, 12.24],
   ] as V3[],
-  escalatorLight: { color: '#9dffd0', intensity: 22, distance: 13 },
+  escalatorLight: { color: '#e8b76a', intensity: 4, distance: 9 }, // warm and dim, like an old tunnel bulb
 }
 
 const hash = (n: number) => {
@@ -58,6 +59,7 @@ export function StationLights({ route }: { route: V3[] }) {
   }, [route])
 
   const refs = useRef<(PointLight | null)[]>([])
+  const on = useGame((s) => s.platformLightsOn) // the story can switch the station dark
   useFrame(({ clock }) => {
     const t = clock.elapsedTime
     lights.forEach((l, k) => {
@@ -65,7 +67,7 @@ export function StationLights({ route }: { route: V3[] }) {
       if (!light || !STATION_LIGHT.flicker.includes(l.index)) return
       const r = hash(Math.floor(t * 12) + l.index * 100)
       const f = r < 0.15 ? 0.05 : r < 0.25 ? 0.5 : 1
-      light.intensity = STATION_LIGHT.intensity[l.color] * f
+      light.intensity = STATION_LIGHT.intensity[l.color] * f * (on ? 1 : 0)
     })
   })
 
@@ -81,7 +83,7 @@ export function StationLights({ route }: { route: V3[] }) {
           ref={(el) => (refs.current[k] = el)}
           position={l.pos}
           color={STATION_LIGHT.colors[l.color]}
-          intensity={STATION_LIGHT.intensity[l.color]}
+          intensity={on ? STATION_LIGHT.intensity[l.color] : 0}
           distance={STATION_LIGHT.distance[l.color]}
           decay={2}
         />

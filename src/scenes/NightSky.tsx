@@ -17,6 +17,8 @@ export function NightSky({ intensity }: { intensity: number }) {
     scene.background = texture
     return () => {
       scene.background = null
+      texture.dispose() // free it: the sky isn't needed after the street
+      useLoader.clear(EXRLoader, NIGHT_SKY)
     }
   }, [scene, texture])
 

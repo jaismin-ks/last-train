@@ -12,12 +12,13 @@ export const CAPTIONS = {
     sendReply: { text: 'Send it', sub: 'Tap the send button' },
   },
   station: {
-    findPlatform: { text: 'Find your platform', sub: 'Hold W to walk  ·  S to step back' },
+    findPlatform: { text: 'Find your platform', sub: 'Hold W to walk  ·  Shift to run  ·  S to step back' },
+    onPlatform: { text: 'Wait for the train', sub: 'Click to look around  ·  WASD to move  ·  Shift to run' },
   },
   street: {
     // shown once when you land, like a film chapter heading
     location: { time: '11:58 PM', place: '25 St.' },
-    findSubway: { text: 'Find the subway entrance', sub: 'Hold W to walk  ·  Move the mouse to look' },
+    findSubway: { text: 'Find the subway entrance', sub: 'Hold W to walk  ·  Shift to run  ·  Move the mouse to look' },
   },
 }
 
@@ -32,6 +33,7 @@ export const THOUGHTS = {
   afterGlance: ['Was someone there?', 'Just keep walking.'],
   along: [{ at: 0.93, text: 'Almost there.' }],
   duration: 3.2, // seconds on screen
+  gateClosed: "Last train... they've locked the station behind me.",
 }
 
 /** Support resources, shown in the pause menu. Verify numbers before launch. */

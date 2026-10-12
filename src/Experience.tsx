@@ -11,6 +11,7 @@ import { Caption } from './ui/Caption'
 import { Thought } from './ui/Thought'
 import { LocationCard } from './ui/LocationCard'
 import { PauseMenu } from './ui/PauseMenu'
+import { StaminaBar } from './ui/StaminaBar'
 import { useEffect, useRef } from 'react'
 import type { RootState } from '@react-three/fiber'
 import { Station } from './scenes/Station'
@@ -56,6 +57,7 @@ export function Experience() {
     <Thought />
     <LocationCard />
     <PauseMenu />
+    <StaminaBar />
     <Prompt />
     <Fader />
     </>

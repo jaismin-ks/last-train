@@ -3,6 +3,7 @@ import { useGLTF } from '@react-three/drei'
 import type { Mesh, MeshStandardMaterial } from 'three'
 import { DRACO, LAMP_LIGHT, LAMP_MATERIAL, STREET_MODEL, SUBWAY_LIGHTS } from '../data/street'
 import { StreetLamps } from './StreetLamps'
+import { disposeTree } from '../systems/dispose'
 
 /** Helper objects from the Blender file (e.g. the box that cuts the stairwell hole). */
 const HIDDEN_OBJECTS = ['LT_SubwayHoleCutter']
@@ -23,6 +24,15 @@ const DIRECTX_NORMALS = ['Asphalt Ground with crack']
  */
 export function Street({ brightness = 1 }: { brightness?: number }) {
   const { scene } = useGLTF(STREET_MODEL, DRACO)
+
+  // Leaving the street for good: free its model and textures from memory
+  useEffect(
+    () => () => {
+      disposeTree(scene)
+      useGLTF.clear(STREET_MODEL)
+    },
+    [scene],
+  )
 
   // Blender helper objects that should never render, even if they get exported
   useEffect(() => {

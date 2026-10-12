@@ -1,0 +1,279 @@
+{
+ "doors": [
+  {
+   "name": "LT_Door_c0_Platform0_A",
+   "side": "platform",
+   "half": "A",
+   "car": 0
+  },
+  {
+   "name": "LT_Door_c0_Platform0_B",
+   "side": "platform",
+   "half": "B",
+   "car": 0
+  },
+  {
+   "name": "LT_Door_c0_Platform1_A",
+   "side": "platform",
+   "half": "A",
+   "car": 0
+  },
+  {
+   "name": "LT_Door_c0_Platform1_B",
+   "side": "platform",
+   "half": "B",
+   "car": 0
+  },
+  {
+   "name": "LT_Door_c0_Platform2_A",
+   "side": "platform",
+   "half": "A",
+   "car": 0
+  },
+  {
+   "name": "LT_Door_c0_Platform2_B",
+   "side": "platform",
+   "half": "B",
+   "car": 0
+  },
+  {
+   "name": "LT_Door_c0_Platform3_A",
+   "side": "platform",
+   "half": "A",
+   "car": 0
+  },
+  {
+   "name": "LT_Door_c0_Platform3_B",
+   "side": "platform",
+   "half": "B",
+   "car": 0
+  },
+  {
+   "name": "LT_Door_c0_Far0_A",
+   "side": "far",
+   "half": "A",
+   "car": 0
+  },
+  {
+   "name": "LT_Door_c0_Far0_B",
+   "side": "far",
+   "half": "B",
+   "car": 0
+  },
+  {
+   "name": "LT_Door_c1_Platform0_A",
+   "side": "platform",
+   "half": "A",
+   "car": 1
+  },
+  {
+   "name": "LT_Door_c1_Platform0_B",
+   "side": "platform",
+   "half": "B",
+   "car": 1
+  },
+  {
+   "name": "LT_Door_c1_Platform1_A",
+   "side": "platform",
+   "half": "A",
+   "car": 1
+  },
+  {
+   "name": "LT_Door_c1_Platform1_B",
+   "side": "platform",
+   "half": "B",
+   "car": 1
+  },
+  {
+   "name": "LT_Door_c1_Platform2_A",
+   "side": "platform",
+   "half": "A",
+   "car": 1
+  },
+  {
+   "name": "LT_Door_c1_Platform2_B",
+   "side": "platform",
+   "half": "B",
+   "car": 1
+  },
+  {
+   "name": "LT_Door_c1_Platform3_A",
+   "side": "platform",
+   "half": "A",
+   "car": 1
+  },
+  {
+   "name": "LT_Door_c1_Platform3_B",
+   "side": "platform",
+   "half": "B",
+   "car": 1
+  },
+  {
+   "name": "LT_Door_c1_Far0_A",
+   "side": "far",
+   "half": "A",
+   "car": 1
+  },
+  {
+   "name": "LT_Door_c1_Far0_B",
+   "side": "far",
+   "half": "B",
+   "car": 1
+  },
+  {
+   "name": "LT_Door_c2_Platform0_A",
+   "side": "platform",
+   "half": "A",
+   "car": 2
+  },
+  {
+   "name": "LT_Door_c2_Platform0_B",
+   "side": "platform",
+   "half": "B",
+   "car": 2
+  },
+  {
+   "name": "LT_Door_c2_Platform1_A",
+   "side": "platform",
+   "half": "A",
+   "car": 2
+  },
+  {
+   "name": "LT_Door_c2_Platform1_B",
+   "side": "platform",
+   "half": "B",
+   "car": 2
+  },
+  {
+   "name": "LT_Door_c2_Platform2_A",
+   "side": "platform",
+   "half": "A",
+   "car": 2
+  },
+  {
+   "name": "LT_Door_c2_Platform2_B",
+   "side": "platform",
+   "half": "B",
+   "car": 2
+  },
+  {
+   "name": "LT_Door_c2_Platform3_A",
+   "side": "platform",
+   "half": "A",
+   "car": 2
+  },
+  {
+   "name": "LT_Door_c2_Platform3_B",
+   "side": "platform",
+   "half": "B",
+   "car": 2
+  },
+  {
+   "name": "LT_Door_c2_Far0_A",
+   "side": "far",
+   "half": "A",
+   "car": 2
+  },
+  {
+   "name": "LT_Door_c2_Far0_B",
+   "side": "far",
+   "half": "B",
+   "car": 2
+  }
+ ],
+ "lights": [
+  [
+   -73.25,
+   -7.72,
+   86.75
+  ],
+  [
+   -73.25,
+   -7.72,
+   82.75
+  ],
+  [
+   -73.25,
+   -7.72,
+   78.75
+  ],
+  [
+   -73.25,
+   -7.72,
+   74.75
+  ],
+  [
+   -73.25,
+   -7.72,
+   70.75
+  ],
+  [
+   -73.25,
+   -7.72,
+   65.0
+  ],
+  [
+   -73.25,
+   -7.72,
+   61.0
+  ],
+  [
+   -73.25,
+   -7.72,
+   57.0
+  ],
+  [
+   -73.25,
+   -7.72,
+   53.0
+  ],
+  [
+   -73.25,
+   -7.72,
+   49.0
+  ],
+  [
+   -73.25,
+   -7.72,
+   43.25
+  ],
+  [
+   -73.25,
+   -7.72,
+   39.25
+  ],
+  [
+   -73.25,
+   -7.72,
+   35.25
+  ],
+  [
+   -73.25,
+   -7.72,
+   31.25
+  ],
+  [
+   -73.25,
+   -7.72,
+   27.25
+  ]
+ ],
+ "cars": [
+  [
+   -73.25,
+   -9.97,
+   78.75
+  ],
+  [
+   -73.25,
+   -9.97,
+   57.0
+  ],
+  [
+   -73.25,
+   -9.97,
+   35.25
+  ]
+ ],
+ "doorSlide": 0.5
+}

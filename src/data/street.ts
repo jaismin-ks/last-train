@@ -94,10 +94,19 @@ export const SUBWAY_LIGHTS = {
 }
 
 /** The "Press E" spot in front of the subway stairs, [x, z], and how close you must be. */
-export const SUBWAY_ENTRANCE = { x: markers.subwayInteract[0], z: markers.subwayInteract[2], radius: 3.5 }
+export const SUBWAY_ENTRANCE = { x: markers.subwayInteract[0], z: markers.subwayInteract[2], radius: 1.6 } // walk this close and it fades into the station
 
 /** Fade timings (seconds) for scene changes. */
-export const SCENE_FADE = { out: 1.4, in: 1.8 }
+export const SCENE_FADE = { out: 1.6, in: 2.0 } // street → black → station
+
+/** Running with Shift: faster, drains energy; energy refills when you stop running. */
+export const RUN = {
+  speedMultiplier: 1.7,
+  drainPerSecond: 0.22, // full bar lasts ~4.5 s
+  refillPerSecond: 0.12, // ~8 s to refill
+  refillDelay: 0.8, // seconds after running before it refills
+  minToStart: 0.25, // after emptying, need this much before you can run again
+}
 
 export const WALK = {
   speed: 3.6, // forward, metres per second (hurried walk)
@@ -115,7 +124,10 @@ export const WALK = {
  * (0 = start, 1 = subway) the player looks over a shoulder and keeps walking.
  */
 export const LOOK_BACK = {
-  at: [0.22, 0.78],
+  at: [0.22, 0.78], // street glances (the station has its own list)
+  heavyStepsLead: 1.6, // seconds of walking before the glance when the sound starts
+  /** What you hear before each street glance, in order. */
+  sounds: ['steps', 'keys'] as ('steps' | 'cough' | 'laugh' | 'keys')[],
   angleDeg: 125, // how far round the head turns (varies a little each time)
   peek: 0.35, // first hesitant half-turn, as a fraction of the full turn
   peekTime: 0.45, // seconds for the hesitant half-turn

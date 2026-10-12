@@ -3,6 +3,7 @@ import { useEffect, useRef } from 'react'
 export type PlayerInput = {
   forward: boolean
   back: boolean
+  run: boolean // Shift held
   /** Mouse position, -1 (left / bottom) to 1 (right / top) */
   lookX: number
   lookY: number
@@ -16,13 +17,14 @@ const BACK = ['KeyS', 'ArrowDown']
  * nothing re-renders when keys change.
  */
 export function usePlayerInput(enabled: boolean) {
-  const input = useRef<PlayerInput>({ forward: false, back: false, lookX: 0, lookY: 0 })
+  const input = useRef<PlayerInput>({ forward: false, back: false, run: false, lookX: 0, lookY: 0 })
 
   useEffect(() => {
     if (!enabled) return
     const i = input.current
     const key = (down: boolean) => (e: KeyboardEvent) => {
       if (FORWARD.includes(e.code)) i.forward = down
+      if (e.code === 'ShiftLeft' || e.code === 'ShiftRight') i.run = down
       if (BACK.includes(e.code)) i.back = down
     }
     const onDown = key(true)
@@ -34,6 +36,7 @@ export function usePlayerInput(enabled: boolean) {
     // Stop walking if the window loses focus mid-step
     const onBlur = () => {
       i.forward = false
+      i.run = false
       i.back = false
     }
     window.addEventListener('keydown', onDown)

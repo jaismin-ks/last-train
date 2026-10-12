@@ -24,6 +24,10 @@ type GameState = {
   caption: { text: string; sub?: string } | null // instruction caption at the bottom of the screen
   thought: string | null // inner-thought line in her voice
   paused: boolean // pause menu open (Esc)
+  stamina: number // 0–1, running energy
+  trainDoorsOpen: boolean // platform-side train doors
+  platformLightsOn: boolean // station lights (go dark later in the story)
+  running: boolean
   setPhase: (phase: Phase) => void
   setBattery: (battery: number) => void
   setStress: (stress: number) => void
@@ -33,6 +37,9 @@ type GameState = {
   setCaption: (caption: { text: string; sub?: string } | null) => void
   setThought: (thought: string | null) => void
   setPaused: (paused: boolean) => void
+  setStamina: (stamina: number, running: boolean) => void
+  setTrainDoorsOpen: (open: boolean) => void
+  setPlatformLightsOn: (on: boolean) => void
 }
 
 /** Dev only: start at any phase with ?phase=descent (etc.) in the URL. */
@@ -50,6 +57,10 @@ export const useGame = create<GameState>((set) => ({
   caption: null,
   thought: null,
   paused: false,
+  stamina: 1,
+  trainDoorsOpen: false,
+  platformLightsOn: true,
+  running: false,
   setPhase: (phase) => set({ phase }),
   setBattery: (battery) => set({ battery: Math.max(0, Math.min(100, battery)) }),
   setStress: (stress) => set({ stress: Math.max(0, Math.min(1, stress)) }),
@@ -59,4 +70,7 @@ export const useGame = create<GameState>((set) => ({
   setCaption: (caption) => set({ caption }),
   setThought: (thought) => set({ thought }),
   setPaused: (paused) => set({ paused }),
+  setStamina: (stamina, running) => set({ stamina, running }),
+  setTrainDoorsOpen: (trainDoorsOpen) => set({ trainDoorsOpen }),
+  setPlatformLightsOn: (platformLightsOn) => set({ platformLightsOn }),
 }))

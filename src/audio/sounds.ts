@@ -102,3 +102,59 @@ export function stopStationAmbience(fadeMs = 1000) {
     if (!stationOn) stationAmbience.stop()
   })
 }
+
+/**
+ * Sounds from someone behind you, right before a glance back. Mostly heavy
+ * footsteps; now and then a cough, a laugh or keys jingling instead.
+ * They creep in from silence and fade away.
+ */
+const PRESENCE = {
+  sounds: {
+    steps: { file: 'heavy-steps', volume: 0.22 },
+    cough: { file: 'man-cough', volume: 0.15 },
+    laugh: { file: ['man-laugh-1', 'man-laugh-2'], volume: 0.18 }, // your recordings, full length
+    keys: { file: 'keys-jingle', volume: 0.14 },
+  },
+}
+export type PresenceKind = keyof typeof PRESENCE.sounds
+// each kind can have several recordings; one is picked at random
+const presence = Object.fromEntries(
+  Object.entries(PRESENCE.sounds).map(([k, s]) => [
+    k,
+    (Array.isArray(s.file) ? s.file : [s.file]).map((f) => new Howl({ src: [`/assets/audio/sfx/${f}.mp3`], volume: 0, preload: true })),
+  ]),
+) as Record<keyof typeof PRESENCE.sounds, Howl[]>
+
+/** Plays one presence sound (laughs pick one of their recordings at random). */
+export function playPresence(kind: PresenceKind = 'steps') {
+  const variants = presence[kind]
+  const howl = variants[Math.floor(Math.random() * variants.length)]
+  const peak = PRESENCE.sounds[kind].volume
+  const id = howl.play()
+  howl.volume(0, id)
+  howl.fade(0, peak, 900, id) // creep in
+  const length = (howl.duration(id) || 2.6) * 1000
+  setTimeout(() => howl.fade(peak, 0, 900, id), Math.max(600, length - 1000)) // and fade away
+}
+
+/** The station gate slamming shut. */
+const clang = new Howl({ src: ['/assets/audio/sfx/metal-clang.mp3'], volume: 0.75, preload: true })
+export const playClang = () => clang.play()
+
+/** Faint heartbeat while running; fades in and out. */
+const HEARTBEAT_VOLUME = 0.32
+const heartbeat = new Howl({ src: ['/assets/audio/sfx/heartbeat-loop.mp3'], volume: 0, loop: true, preload: true })
+let heartbeatOn = false
+export function setHeartbeat(on: boolean) {
+  if (on === heartbeatOn) return
+  heartbeatOn = on
+  if (on) {
+    if (!heartbeat.playing()) heartbeat.play()
+    heartbeat.fade(heartbeat.volume() as number, HEARTBEAT_VOLUME, 600)
+  } else {
+    heartbeat.fade(heartbeat.volume() as number, 0, 2500) // slows to nothing after you stop
+    heartbeat.once('fade', () => {
+      if (!heartbeatOn) heartbeat.pause()
+    })
+  }
+}
