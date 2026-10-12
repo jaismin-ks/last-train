@@ -34,11 +34,18 @@ Raw, heavy source files (`.blend`, Figma exports, uncompressed `.wav`) go in
 `assets-src/`. That folder is ignored by git.
 
 
-## Optimising a model for the web
+## Optimising the street for the web
+
+Export from Blender to `assets-src/blender/street-raw.glb` (visible objects only), then:
 
 ```bash
-npx gltf-transform optimize assets-src/blender/street.glb public/assets/models/street.glb --compress draco --texture-compress webp
+npm run optimize:street
 ```
+
+This drops material extras that don't matter at night, joins meshes, resizes
+textures to 512 px WebP and Draco-compresses geometry (≈500 MB → ≈4 MB).
+Pass a different texture size as a third argument if needed, for example
+`node scripts/optimize-street.mjs assets-src/blender/street-raw.glb public/assets/models/street.glb 1024`.
 
 ## Project layout
 
