@@ -22,4 +22,11 @@ export async function setupTheatre() {
   const extension = unwrap((await import('@theatre/r3f/dist/extension')).default)
   studio.initialize()
   studio.extend(extension)
+  // Hidden by default so the game looks like the real thing; press ` to toggle
+  studio.ui.hide()
+  window.addEventListener('keydown', (e) => {
+    if (e.key !== '`') return
+    if (studio.ui.isHidden) studio.ui.restore()
+    else studio.ui.hide()
+  })
 }

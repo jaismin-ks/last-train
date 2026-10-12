@@ -3,5 +3,12 @@
 *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 html, body, #root { width: 100%; height: 100%; background: #000; color: #fff; overflow: hidden; }
-body { font-family: Inter, system-ui, -apple-system, sans-serif; -webkit-font-smoothing: antialiased; }
+/* Fonts: Instrument Serif for titles, IBM Plex Mono for captions and UI */
+:root {
+  --font-display: 'Instrument Serif', 'Times New Roman', serif;
+  --font-ui: 'IBM Plex Mono', ui-monospace, Menlo, monospace;
+  --text: #e8ece9;
+  --text-dim: #8b928e;
+}
+body { font-family: var(--font-ui); color: var(--text); -webkit-font-smoothing: antialiased; }
 button { font: inherit; cursor: pointer; }

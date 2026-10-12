@@ -13,6 +13,7 @@ import {
 import { Phone, type ScreenPointer } from '../components/Phone'
 import { createTypingScreen } from '../components/typingScreen'
 import { useGame } from '../store'
+import { CAPTIONS } from '../data/captions'
 import { playKeyTap, playLowBattery, playMessageIn, playMessageOut } from '../audio/sounds'
 import { DESCENT } from '../data/street'
 
@@ -64,6 +65,18 @@ export function PhoneIntro() {
     if (index < phoneSteps.length - 1) setIndex(index + 1)
 
   }
+
+  // Instruction captions for what to do next
+  const setCaption = useGame((s) => s.setCaption)
+  useEffect(() => {
+    const c = CAPTIONS.phone
+    const f = step.file
+    if (f.startsWith('01-lock')) setCaption(c.unlock)
+    else if (f.startsWith('02-chat-open')) setCaption(typing === 'idle' ? c.textMom : typing === 'typed' ? c.sendFirst : null)
+    else if (f.startsWith('06-chat-mom-reply')) setCaption(typing === 'idle' ? c.reply : typing === 'typed' ? c.sendReply : null)
+    else setCaption(null)
+  }, [step.file, typing, setCaption])
+  useEffect(() => () => setCaption(null), [setCaption])
 
   // Sounds for screens that appear on their own
   useEffect(() => {

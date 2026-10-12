@@ -21,12 +21,18 @@ type GameState = {
   blackout: number // 0–1, full-screen black fade between scenes
   phoneOpacity: number // 0–1, phone fades out as the descent begins
   prompt: string | null // on-screen interaction hint, e.g. "Press E to enter"
+  caption: { text: string; sub?: string } | null // instruction caption at the bottom of the screen
+  thought: string | null // inner-thought line in her voice
+  paused: boolean // pause menu open (Esc)
   setPhase: (phase: Phase) => void
   setBattery: (battery: number) => void
   setStress: (stress: number) => void
   setBlackout: (blackout: number) => void
   setPhoneOpacity: (opacity: number) => void
   setPrompt: (prompt: string | null) => void
+  setCaption: (caption: { text: string; sub?: string } | null) => void
+  setThought: (thought: string | null) => void
+  setPaused: (paused: boolean) => void
 }
 
 /** Dev only: start at any phase with ?phase=descent (etc.) in the URL. */
@@ -41,10 +47,16 @@ export const useGame = create<GameState>((set) => ({
   blackout: 0,
   phoneOpacity: 1,
   prompt: null,
+  caption: null,
+  thought: null,
+  paused: false,
   setPhase: (phase) => set({ phase }),
   setBattery: (battery) => set({ battery: Math.max(0, Math.min(100, battery)) }),
   setStress: (stress) => set({ stress: Math.max(0, Math.min(1, stress)) }),
   setBlackout: (blackout) => set({ blackout: Math.max(0, Math.min(1, blackout)) }),
   setPhoneOpacity: (phoneOpacity) => set({ phoneOpacity }),
   setPrompt: (prompt) => set({ prompt }),
+  setCaption: (caption) => set({ caption }),
+  setThought: (thought) => set({ thought }),
+  setPaused: (paused) => set({ paused }),
 }))

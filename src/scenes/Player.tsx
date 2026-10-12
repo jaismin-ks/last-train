@@ -4,6 +4,8 @@ import { CatmullRomCurve3, MathUtils, Vector3 } from 'three'
 import { EYE_HEIGHT, LOOK_BACK, ROUTE, WALK } from '../data/street'
 import { usePlayerInput } from '../systems/usePlayerInput'
 import { SubwayInteract } from './SubwayInteract'
+import { useGame } from '../store'
+import { CAPTIONS, STREET_CAPTION_TIME, THOUGHTS } from '../data/captions'
 import { setFootsteps } from '../audio/sounds'
 
 /**
@@ -17,6 +19,14 @@ import { setFootsteps } from '../audio/sounds'
  */
 export function Player() {
   const frozen = useRef(false) // set when entering the subway
+  const setCaption = useGame((s) => s.setCaption)
+  const walkedFor = useRef(0) // seconds spent walking, to retire the caption
+  const setThought = useGame((s) => s.setThought)
+  const thoughtsDone = useRef(new Set<number>()) // route thoughts already shown
+  useEffect(() => {
+    setCaption(CAPTIONS.street.findSubway)
+    return () => setCaption(null)
+  }, [setCaption])
   const glance = useRef<{ start: number; side: number; angle: number } | null>(null) // current look back
   const nextGlance = useRef(0) // index into LOOK_BACK.at
   useEffect(() => () => setFootsteps(0), [])
@@ -48,9 +58,21 @@ export function Player() {
     const before = distance.current
     distance.current = MathUtils.clamp(distance.current + moving * speed * slow * dt, 0, length)
     const advanced = distance.current !== before
+    if (advanced && walkedFor.current < STREET_CAPTION_TIME) {
+      walkedFor.current += dt
+      if (walkedFor.current >= STREET_CAPTION_TIME) setCaption(null)
+    }
     setFootsteps(advanced ? (moving > 0 ? (slow < 1 ? 0.95 : 1.25) : 0.9) : 0) // step rate follows the walking pace
 
     const u = distance.current / length
+
+    // thoughts at points along the walk
+    THOUGHTS.along.forEach((t, i) => {
+      if (u >= t.at && !thoughtsDone.current.has(i)) {
+        thoughtsDone.current.add(i)
+        setThought(t.text)
+      }
+    })
 
     // Nervous glance back: triggered once at each point, only while walking forward
     if (!glance.current && moving > 0 && nextGlance.current < LOOK_BACK.at.length && u >= LOOK_BACK.at[nextGlance.current]) {
@@ -70,7 +92,12 @@ export function Player() {
       else if (t < t3) glanceK = peek + (1 - peek) * easeInOut((t - t2) / turn) // commit
       else if (t < t4) glanceK = 1 // look
       else if (t < t5) glanceK = 1 - easeInOut((t - t4) / back) // turn forward again
-      else glance.current = null
+      else {
+        glance.current = null
+        // a thought right after looking back
+        const line = THOUGHTS.afterGlance[nextGlance.current - 1]
+        if (line) setThought(line)
+      }
       // small, uneven head movement so it never looks like a camera on rails
       wobble = Math.sin(t * 7.3) * 0.6 + Math.sin(t * 3.1 + 1.7) * 0.4
     }    curve.getPointAt(u, pos)

@@ -1,15 +1,39 @@
 .screen {
   position: fixed; inset: 0; display: flex; flex-direction: column;
-  align-items: center; justify-content: center; gap: 24px; padding: 32px;
+  align-items: center; justify-content: center; gap: 22px; padding: 32px;
   background: #000; text-align: center; animation: fade 1.5s ease both;
 }
-.label { font-size: 13px; letter-spacing: 0.12em; color: #8e8e93; font-weight: 600; }
-.body { max-width: 560px; font-size: 24px; line-height: 1.4; font-weight: 500; }
-.small { max-width: 480px; font-size: 15px; color: #8e8e93; line-height: 1.5; }
-.primary { margin-top: 32px; padding: 16px 40px; border: 0; border-radius: 999px; background: #fff; color: #000; font-weight: 600; }
-.link { background: none; border: 0; color: #8e8e93; }
-.title { font-size: clamp(40px, 8vw, 96px); font-weight: 700; letter-spacing: 0.12em; }
-.subtitle { color: #8e8e93; font-size: 18px; }
-.begin { background: none; border: 0; color: #fff; font-size: 32px; animation: pulse 2.5s ease-in-out infinite; }
+.clickable { cursor: pointer; user-select: none; }
+
+/* Content warning */
+.label { font-family: var(--font-ui); font-size: 12px; letter-spacing: 0.3em; color: var(--text-dim); text-transform: uppercase; }
+.body { max-width: 620px; font-family: var(--font-display); font-size: clamp(26px, 3.2vw, 36px); line-height: 1.25; color: var(--text); }
+.small { max-width: 480px; font-size: 13px; color: var(--text-dim); line-height: 1.7; letter-spacing: 0.02em; }
+.primary {
+  margin-top: 28px; padding: 14px 34px; border: 1px solid rgba(232, 236, 233, 0.5); border-radius: 0;
+  background: transparent; color: var(--text); font-family: var(--font-ui); font-size: 12px;
+  letter-spacing: 0.25em; text-transform: uppercase; transition: background 0.3s, color 0.3s;
+}
+.primary:hover { background: var(--text); color: #000; }
+.link { background: none; border: 0; color: var(--text-dim); font-size: 12px; letter-spacing: 0.15em; text-decoration: underline; text-underline-offset: 4px; }
+
+/* Title */
+.title { font-family: var(--font-display); font-weight: 400; font-size: clamp(64px, 11vw, 150px); letter-spacing: 0.04em; line-height: 0.9; }
+.subtitle { font-family: var(--font-display); font-style: italic; color: var(--text-dim); font-size: clamp(18px, 2vw, 24px); }
+
+/* Begin */
+.begin {
+  background: none; border: 0; color: var(--text); font-family: var(--font-display); font-style: italic;
+  font-size: clamp(40px, 5vw, 60px); animation: pulse 2.8s ease-in-out infinite;
+}
+
+/* "Click anywhere to continue" and similar hints at the bottom of a screen */
+.hint {
+  position: absolute; bottom: 9%; left: 0; right: 0;
+  font-size: 11px; letter-spacing: 0.35em; text-transform: uppercase; color: var(--text-dim);
+  animation: fade 1.5s 1.8s ease both, pulse 2.8s 3.3s ease-in-out infinite;
+}
+.headphones { display: flex; align-items: center; gap: 10px; font-size: 12px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--text-dim); }
+
 @keyframes fade { from { opacity: 0 } to { opacity: 1 } }
-@keyframes pulse { 50% { opacity: 0.4 } }
+@keyframes pulse { 50% { opacity: 0.35 } }

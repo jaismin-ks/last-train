@@ -1,0 +1,48 @@
+import { useEffect, useState } from 'react'
+import { useGame } from '../store'
+
+/**
+ * Instruction caption at the bottom of the screen, styled like film subtitles.
+ * Cross-fades when the text changes.
+ */
+export function Caption() {
+  const caption = useGame((s) => s.caption)
+  const [shown, setShown] = useState(caption)
+  const [visible, setVisible] = useState(!!caption)
+
+  useEffect(() => {
+    setVisible(false)
+    const t = setTimeout(() => {
+      setShown(caption)
+      setVisible(!!caption)
+    }, 350)
+    return () => clearTimeout(t)
+  }, [caption?.text, caption?.sub]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  return (
+    <div
+      aria-live="polite"
+      style={{
+        position: 'fixed',
+        left: 0,
+        right: 0,
+        bottom: '6%',
+        textAlign: 'center',
+        pointerEvents: 'none',
+        zIndex: 6,
+        opacity: visible ? 1 : 0,
+        transition: 'opacity 0.35s ease',
+        textShadow: '0 0 14px rgba(0,0,0,0.95), 0 0 3px rgba(0,0,0,0.9)',
+      }}
+    >
+      <div style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(15px, 1.35vw, 19px)', color: 'var(--text)' }}>
+        {shown?.text}
+      </div>
+      {shown?.sub && (
+        <div style={{ marginTop: 6, fontSize: 10, letterSpacing: '0.25em', textTransform: 'uppercase', color: 'var(--text-dim)' }}>
+          {shown.sub}
+        </div>
+      )}
+    </div>
+  )
+}
