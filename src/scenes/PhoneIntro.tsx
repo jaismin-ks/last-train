@@ -13,6 +13,7 @@ import {
 import { Phone, type ScreenPointer } from '../components/Phone'
 import { createTypingScreen } from '../components/typingScreen'
 import { useGame } from '../store'
+import { playKeyTap, playLowBattery, playMessageIn, playMessageOut } from '../audio/sounds'
 import { DESCENT } from '../data/street'
 
 /** The phone sits this far in front of the camera at this field of view. */
@@ -56,12 +57,19 @@ export function PhoneIntro() {
   const typingScreen = useMemo(createTypingScreen, [])
   useEffect(() => typingScreen.dispose, [typingScreen])
   const typingRun = useRef<{ start: number; times: number[]; end: number } | null>(null)
+  const lastCount = useRef(0)
 
   const next = () => {
     setTyping('idle')
     if (index < phoneSteps.length - 1) setIndex(index + 1)
 
   }
+
+  // Sounds for screens that appear on their own
+  useEffect(() => {
+    if (step.file.startsWith('06-chat-mom-reply')) playMessageIn()
+    if (step.file.startsWith('08-chat-battery')) playLowBattery()
+  }, [step.file])
 
   // Auto-advancing steps
   useEffect(() => {
@@ -106,6 +114,8 @@ export function PhoneIntro() {
 
     const chars = [...a.text] // by character, so emoji stay whole
     const count = run.times.filter((time) => time <= t).length
+    if (count > lastCount.current) playKeyTap() // one tap per letter, only while typing
+    lastCount.current = count
     const lastTime = run.times[count - 1] ?? -1
     const pressed = count > 0 && t - lastTime < 0.12 ? chars[count - 1] : null
     const caretOn = count < chars.length || Math.floor(t * 2) % 2 === 0
@@ -141,9 +151,11 @@ export function PhoneIntro() {
     if (a.type === 'tapThenType') {
       if (typing === 'idle' && inHotspot(p, a.hotspot)) {
         typingRun.current = null // start a fresh timer for this message
+        lastCount.current = 0
         setTyping('typing')
       }
       if (typing === 'typed' && inHotspot(p, a.send)) {
+        playMessageOut()
         typingRun.current = null
         next()
       }

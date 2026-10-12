@@ -4,8 +4,11 @@ import { Color, Fog, MathUtils, PerspectiveCamera, Vector3 } from 'three'
 import { DESCENT, EYE_HEIGHT, FOG, NIGHT_LIGHT, PLAYER_START } from '../data/street'
 import { useGame } from '../store'
 import { NightSky } from './NightSky'
+import { SkyHaze } from './SkyHaze'
 import { Street } from './Street'
 import { Player } from './Player'
+import { StreetEffects } from './StreetEffects'
+import { startAmbience } from '../audio/sounds'
 
 /** Street-level fog; the descent starts thicker and eases to this. */
 
@@ -32,6 +35,11 @@ export function Descent() {
   const fog = useRef<Fog>(null)
 
   const running = phase === 'descent' || phase === 'street'
+
+  // Outside ambience comes in once the phone has faded out
+  useEffect(() => {
+    if (running) startAmbience()
+  }, [running])
 
   // Switch from the phone close-up lens to the city lens when the descent starts
   useEffect(() => {
@@ -84,6 +92,7 @@ export function Descent() {
   return (
     <>
       <NightSky intensity={sky} />
+      <SkyHaze opacity={sky} />
       {/* Placeholder night lighting until lamps and windows are lit */}
       <hemisphereLight args={[NIGHT_LIGHT.skyColor, NIGHT_LIGHT.groundColor, NIGHT_LIGHT.sky * sky]} />
       <directionalLight position={NIGHT_LIGHT.moonPosition} intensity={NIGHT_LIGHT.moon * sky} color={NIGHT_LIGHT.moonColor} />
@@ -96,6 +105,7 @@ export function Descent() {
       {/* Lamps stay on even while hidden, so their shaders are ready (no hitch) */}
       <Street brightness={running ? Math.max(sky, 0.001) : 1} />
       {phase === 'street' && <Player />}
+      {running && <StreetEffects />}
     </>
   )
 }

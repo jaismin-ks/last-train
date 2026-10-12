@@ -23,28 +23,46 @@ type V3 = [number, number, number]
 /** Street lamp bulbs: sodium orange, isolated pools of light (the Pinterest board). */
 export const LAMPS = markers.lampLights as V3[]
 export const LAMP_LIGHT = {
-  color: '#ff9a45', // sodium orange
-  intensity: 18, // raise for brighter pools of light
-  distance: 14, // metres the light reaches
+  color: '#ff7a1f', // deep sodium orange
+  glassColor: '#ffb066', // tint of the glowing lamp glass
+  intensity: 24, // raise for brighter pools of light
+  distance: 11, // metres the light reaches: islands with darkness between
   glassGlow: 3, // emissive strength of the lamp glass (if the lamp has a glass material)
 }
 export const LAMP_MATERIAL = 'Material.014'
+
+/**
+ * Per-lamp behaviour, same order as LAMPS (street-markers.json):
+ *   on      steady
+ *   flicker buzzes and cuts out at random
+ *   dead    no light, glass dark
+ */
+export type LampState = 'on' | 'flicker' | 'dead'
+export const LAMP_STATES: LampState[] = ['on', 'flicker', 'on', 'dead', 'on', 'on']
 
 /**
  * Soft night fill so building silhouettes read against the sky.
  * Raise `sky` / `moon` for a brighter night, lower for darker.
  */
 export const NIGHT_LIGHT = {
-  skyColor: '#3b4c78', // cool blue from above
-  groundColor: '#14110f', // faint warm bounce from the street
-  sky: 3.2,
-  moonColor: '#a9bcff',
-  moon: 1.2,
-  moonPosition: [-40, 80, 30] as [number, number, number],
+  skyColor: '#27302d', // dark grey with a faint green tint
+  groundColor: '#070908', // almost no bounce from the street
+  sky: 1.3, // keep low: darkness between lamps is the point
+  moonColor: '#b4ccbf', // pale moonlight with a hint of green
+  moon: 1.5,
+  // behind the player's start, so it lights the faces of the buildings ahead
+  moonPosition: [30, 90, 80] as [number, number, number],
 }
 
-/** Street-level fog: far buildings fade out instead of vanishing into black. */
-export const FOG = { color: '#05070d', near: 18, far: 120 }
+/** Street-level fog: hazy green-grey, distant towers fade to silhouettes. */
+export const FOG = { color: '#050a09', near: 10, far: 120 }
+
+/** Mist over the sky: thick at the horizon, thinning upward. */
+export const HAZE = {
+  color: '#08100d', // close to the fog colour so buildings melt into it
+  strength: 0.92, // 0 = clear sky, 1 = fully hazy at the horizon
+  height: 0.45, // how far up the sky the haze reaches (0–1)
+}
 
 /** Sidewalk top is 0.15 m above the road; eyes ~1.6 m above that. Real scale. */
 export const EYE_HEIGHT = 0.15 + 1.6
@@ -71,18 +89,39 @@ export const SUBWAY_LIGHTS = {
   globes: {} as Record<string, { color: string; glow: number }>,
 }
 
-/** The "Press E" spot in front of the subway stairs, [x, z]. */
-export const SUBWAY_ENTRANCE = { x: markers.subwayInteract[0], z: markers.subwayInteract[2] }
+/** The "Press E" spot in front of the subway stairs, [x, z], and how close you must be. */
+export const SUBWAY_ENTRANCE = { x: markers.subwayInteract[0], z: markers.subwayInteract[2], radius: 3.5 }
+
+/** Fade timings (seconds) for scene changes. */
+export const SCENE_FADE = { out: 1.4, in: 1.8 }
 
 export const WALK = {
-  speed: 2.0, // forward, metres per second (brisk walk)
-  backSpeed: 1.2, // retracing steps, slower and hesitant
+  speed: 3.6, // forward, metres per second (hurried walk)
+  backSpeed: 2.0, // retracing steps, slower and hesitant
   maxYawDeg: 55, // how far you can look left / right
   maxPitchUpDeg: 18,
   maxPitchDownDeg: 14,
   lookSmoothing: 4, // higher = head turns faster toward the mouse
   bobAmount: 0.025, // head bob height while walking
   bobSpeed: 7,
+}
+
+/**
+ * Nervous glances back while walking: at these points along the route
+ * (0 = start, 1 = subway) the player looks over a shoulder and keeps walking.
+ */
+export const LOOK_BACK = {
+  at: [0.22, 0.78],
+  angleDeg: 125, // how far round the head turns (varies a little each time)
+  peek: 0.35, // first hesitant half-turn, as a fraction of the full turn
+  peekTime: 0.45, // seconds for the hesitant half-turn
+  pause: 0.18, // seconds frozen mid-turn before committing
+  turn: 0.55, // seconds to finish turning round
+  hold: 0.55, // seconds looking back
+  back: 0.9, // seconds to turn forward again
+  tiltDeg: 5, // head tilts as it turns
+  dipDeg: 4, // and dips slightly
+  walkSlowdown: 0.55, // walking speed multiplier while glancing
 }
 
 /** Descent cutscene timing (seconds) and the height it starts from. */

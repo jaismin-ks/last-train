@@ -1,7 +1,8 @@
 import { useEffect } from 'react'
 import { useGLTF } from '@react-three/drei'
 import type { Mesh, MeshStandardMaterial } from 'three'
-import { DRACO, LAMP_LIGHT, LAMP_MATERIAL, LAMPS, STREET_MODEL, SUBWAY_LIGHTS } from '../data/street'
+import { DRACO, LAMP_LIGHT, LAMP_MATERIAL, STREET_MODEL, SUBWAY_LIGHTS } from '../data/street'
+import { StreetLamps } from './StreetLamps'
 
 /** Helper objects from the Blender file (e.g. the box that cuts the stairwell hole). */
 const HIDDEN_OBJECTS = ['LT_SubwayHoleCutter']
@@ -73,16 +74,7 @@ export function Street({ brightness = 1 }: { brightness?: number }) {
   return (
     <>
       <primitive object={scene} />
-      {LAMPS.map((pos, i) => (
-        <pointLight
-          key={i}
-          position={pos}
-          color={LAMP_LIGHT.color}
-          intensity={LAMP_LIGHT.intensity * brightness}
-          distance={LAMP_LIGHT.distance}
-          decay={2}
-        />
-      ))}
+      <StreetLamps scene={scene} brightness={brightness} />
       {SUBWAY_LIGHTS.positions.map((pos, i) => (
         <pointLight
           key={`subway-${i}`}
