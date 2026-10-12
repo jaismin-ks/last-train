@@ -7,7 +7,7 @@
  *   auto    — moves on by itself after `after` seconds
  *   tap     — player clicks inside `hotspot`
  *   swipeUp — player drags upward on the screen (unlock)
- *   end     — last screen, holds until the next scene fades in
+ *   end     — last screen, holds, then the phone fades out into the descent
  *   tapThenType — player taps `hotspot`, `text` types itself out, then player taps `send`
  */
 export const SCREEN_W = 393
@@ -18,8 +18,11 @@ export type Advance =
   | { type: 'auto'; after: number }
   | { type: 'tap'; hotspot: Hotspot }
   | { type: 'swipeUp' }
-  /** Final screen: stays up until the scene transition takes over. */
-  | { type: 'end' }
+  /**
+   * Final screen: holds for `hold` s (or until `skip` is tapped), then the
+   * phone fades to black and the descent starts.
+   */
+  | { type: 'end'; hold: number; skip?: Hotspot }
   /**
    * Tap `hotspot`, `text` types out letter by letter over this screen,
    * then tap `send` to move on. Drawn live, so no separate "typed" image is needed.
@@ -59,10 +62,11 @@ export const phoneSteps: PhoneStep[] = [
   },
   // Reply sent → Delivered… a pause before the battery alert pops up
   { file: '07-chat-replied.png', advance: { type: 'auto', after: 2 } },
-  // Low battery alert → tap Close
-  { file: '08-chat-battery.png', advance: { type: 'tap', hotspot: { x: 61, y: 430, w: 270, h: 50 } } },
-  // Alert dismissed → phone stays on screen (fade to the street comes later)
-  { file: '07-chat-replied.png', advance: { type: 'end' } },
+  // Low battery alert → continues by itself after 2 s; tapping Close skips the wait
+  {
+    file: '08-chat-battery.png',
+    advance: { type: 'end', hold: 2, skip: { x: 61, y: 430, w: 270, h: 50 } },
+  },
 ]
 
 export const phoneScreenUrl = (file: string) => `/assets/phone/${file}`

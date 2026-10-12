@@ -13,6 +13,8 @@ export type ScreenPointer = { x: number; y: number } // Figma px, origin top-lef
 
 type Props = {
   screen: Texture
+  /** 0–1, fades the whole phone (body and screen) */
+  opacity?: number
   onScreenDown?: (p: ScreenPointer) => void
   onScreenMove?: (p: ScreenPointer) => void
   onScreenUp?: (p: ScreenPointer) => void
@@ -23,7 +25,7 @@ type Props = {
  * The model's UVs only cover part of the texture, so they are rebuilt
  * from the mesh bounds to map the image edge to edge.
  */
-export function Phone({ screen, onScreenDown, onScreenMove, onScreenUp }: Props) {
+export function Phone({ screen, opacity = 1, onScreenDown, onScreenMove, onScreenUp }: Props) {
   const { scene } = useGLTF(MODEL, DRACO)
   const material = useMemo(() => new MeshBasicMaterial({ toneMapped: false }), [])
 
@@ -49,6 +51,23 @@ export function Phone({ screen, onScreenDown, onScreenMove, onScreenUp }: Props)
     material.map = screen
     material.needsUpdate = true
   }, [material, screen])
+
+  // Fade every material on the phone
+  useEffect(() => {
+    scene.traverse((o) => {
+      const mesh = o as Mesh
+      if (!mesh.isMesh) return
+      const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material]
+      for (const m of mats) {
+        if (m.transparent !== opacity < 1) {
+          m.transparent = opacity < 1
+          m.needsUpdate = true // recompile so the transparency change applies
+        }
+        m.opacity = opacity
+        m.depthWrite = opacity >= 1
+      }
+    })
+  }, [scene, opacity])
 
   // Convert a hit on the screen mesh into Figma pixel coordinates
   const toScreen = (e: ThreeEvent<PointerEvent>): ScreenPointer | null => {

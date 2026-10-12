@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useFrame } from '@react-three/fiber'
+import type { Group } from 'three'
 import { useTexture } from '@react-three/drei'
 import { editable as e } from '@theatre/r3f'
-import { SRGBColorSpace } from 'three'
+import { MathUtils, SRGBColorSpace } from 'three'
 import {
   inHotspot,
   phoneScreenUrl,
@@ -11,6 +12,12 @@ import {
 } from '../data/phoneScreens'
 import { Phone, type ScreenPointer } from '../components/Phone'
 import { createTypingScreen } from '../components/typingScreen'
+import { useGame } from '../store'
+import { DESCENT } from '../data/street'
+
+/** The phone sits this far in front of the camera at this field of view. */
+const PHONE_DISTANCE = 0.32
+const PHONE_FOV = 35
 
 /** Per-letter timestamps (seconds) with a little human jitter and pauses after spaces. */
 function typingSchedule(text: string, cps: number) {
@@ -34,7 +41,13 @@ export function PhoneIntro() {
   const textures = useTexture(urls)
   textures.forEach((t) => (t.colorSpace = SRGBColorSpace))
 
+  const setPhase = useGame((s) => s.setPhase)
+  const phase = useGame((s) => s.phase)
+  const [opacity, setOpacity] = useState(1)
   const [index, setIndex] = useState(0)
+  const endStart = useRef<number | null>(null)
+  const skipped = useRef(false)
+  const follow = useRef<Group>(null)
   // idle → typing (letters appear) → typed (full message + send button, waiting for a tap)
   const [typing, setTyping] = useState<'idle' | 'typing' | 'typed'>('idle')
   const swipeStart = useRef<number | null>(null)
@@ -47,7 +60,6 @@ export function PhoneIntro() {
   const next = () => {
     setTyping('idle')
     if (index < phoneSteps.length - 1) setIndex(index + 1)
-    // Last step holds the phone on screen. Later: fade out, then setPhase('street').
 
   }
 
@@ -60,8 +72,32 @@ export function PhoneIntro() {
   }, [index])
 
   // Typing animation, redrawn every frame while it runs
-  useFrame(({ clock }) => {
+  useFrame(({ clock, camera }) => {
+    // Keep the phone in front of the camera, even while the descent moves it.
+    // Distance scales with the field of view so the phone stays the same size on screen.
+    if (follow.current) {
+      const fov = (camera as { fov?: number }).fov ?? PHONE_FOV
+      const d = PHONE_DISTANCE * Math.tan(MathUtils.degToRad(PHONE_FOV / 2)) / Math.tan(MathUtils.degToRad(fov / 2))
+      follow.current.position.copy(camera.position)
+      follow.current.quaternion.copy(camera.quaternion)
+      follow.current.translateZ(-d)
+    }
+
     const a = step.advance
+
+    // Last screen: hold (or skip), fade the phone to black, then start the descent
+    if (a.type === 'end') {
+      if (endStart.current === null) endStart.current = clock.elapsedTime
+      if (skipped.current) {
+        endStart.current = clock.elapsedTime - a.hold
+        skipped.current = false
+      }
+      const t = clock.elapsedTime - endStart.current - a.hold
+      if (t > 0) setOpacity(Math.max(0, 1 - t / DESCENT.phoneFade))
+      if (phase === 'phoneIntro' && t >= DESCENT.phoneFade) setPhase('descent')
+      return
+    }
+
     if (typing === 'idle' || a.type !== 'tapThenType') return
     const now = clock.elapsedTime
     if (!typingRun.current) typingRun.current = { start: now, ...typingSchedule(a.text, a.charsPerSecond) }
@@ -85,6 +121,7 @@ export function PhoneIntro() {
     const a = step.advance
     const overHotspot =
       (a.type === 'tap' && inHotspot(p, a.hotspot)) ||
+      (a.type === 'end' && !!a.skip && inHotspot(p, a.skip)) ||
       (a.type === 'tapThenType' && inHotspot(p, typing === 'typed' ? a.send : a.hotspot))
     document.body.style.cursor = !interactive
       ? 'default'
@@ -100,6 +137,7 @@ export function PhoneIntro() {
     const a = step.advance
     if (a.type === 'swipeUp') swipeStart.current = p.y
     if (a.type === 'tap' && inHotspot(p, a.hotspot)) next()
+    if (a.type === 'end' && a.skip && inHotspot(p, a.skip)) skipped.current = true
     if (a.type === 'tapThenType') {
       if (typing === 'idle' && inHotspot(p, a.hotspot)) {
         typingRun.current = null // start a fresh timer for this message
@@ -121,17 +159,18 @@ export function PhoneIntro() {
   useEffect(() => () => void (document.body.style.cursor = 'default'), [])
 
   return (
-    <>
+    <group ref={follow}>
       <ambientLight intensity={0.1} />
-      <e.pointLight theatreKey="Phone Light" position={[0.2, 0.3, 0.5]} intensity={1} />
+      <e.pointLight theatreKey="Phone Light" position={[0.2, 0.3, 0.18]} intensity={opacity} />
       <e.group theatreKey="Phone">
         <Phone
+          opacity={opacity}
           screen={typing !== 'idle' ? typingScreen.texture : textures[index]}
           onScreenDown={onDown}
           onScreenMove={onMove}
           onScreenUp={onUp}
         />
       </e.group>
-    </>
+    </group>
   )
 }

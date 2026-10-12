@@ -1,0 +1,97 @@
+import { useEffect, useRef, useState } from 'react'
+import { useFrame, useThree } from '@react-three/fiber'
+import { Fog, MathUtils, PerspectiveCamera, Vector3 } from 'three'
+import { DESCENT, EYE_HEIGHT, PLAYER_START } from '../data/street'
+import { useGame } from '../store'
+import { NightSky } from './NightSky'
+import { Street } from './Street'
+import { Player } from './Player'
+
+/** Street-level fog; the descent starts thicker and eases to this. */
+const FOG = { color: '#020306', near: 12, far: 70 }
+
+const ease = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2) // easeInOutCubic
+
+/**
+ * Mounted from the start of the phone scene so the street's materials and
+ * lights are compiled early (the phone camera sits far below, inside the
+ * black fog, so none of it is visible). When the phase becomes 'descent': the starry sky fades in while the camera looks up,
+ * then the camera drops from high above the city to eye level and
+ * tilts down to face up the street. Hands over to 'street' when done.
+ */
+export function Descent() {
+  const camera = useThree((s) => s.camera) as PerspectiveCamera
+  const setPhase = useGame((s) => s.setPhase)
+
+  const phase = useGame((s) => s.phase)
+  const start = useRef<number | null>(null)
+  const [sky, setSky] = useState(phase === 'street' ? 1 : 0)
+  const target = useRef(new Vector3())
+  const fog = useRef<Fog>(null)
+
+  const running = phase === 'descent' || phase === 'street'
+
+  // Switch from the phone close-up lens to the city lens when the descent starts
+  useEffect(() => {
+    if (!running) return
+    camera.fov = 60
+    camera.near = 0.05
+    camera.far = 500
+    camera.updateProjectionMatrix()
+  }, [camera, running])
+
+  useFrame(({ clock }) => {
+    if (phase !== 'descent') return
+    if (start.current === null) start.current = clock.elapsedTime
+    const t = clock.elapsedTime - start.current
+    const { skyFade, hold, drop, startHeight, startPitchDeg, tiltStart } = DESCENT
+
+    // Stars fade in from black
+    setSky(ease(Math.min(1, t / skyFade)))
+
+    // 0 while fading in + holding on the stars, then 0 → 1 over the drop
+    const p = ease(MathUtils.clamp((t - skyFade - hold) / drop, 0, 1))
+    const height = MathUtils.lerp(startHeight, EYE_HEIGHT, p)
+    // Straight down onto the start point
+    const x = PLAYER_START.x
+    const z = PLAYER_START.z
+
+    // Thick fog up high hides the edges of the ground; it clears near the street
+    if (fog.current) {
+      fog.current.near = MathUtils.lerp(4, FOG.near, p)
+      fog.current.far = MathUtils.lerp(30, FOG.far, p)
+    }
+    // Keep looking up while above the roofs, then tilt down to the street
+    const raw = MathUtils.clamp((t - skyFade - hold) / drop, 0, 1)
+    const tilt = ease(MathUtils.clamp((raw - tiltStart) / (1 - tiltStart), 0, 1))
+    const pitch = MathUtils.degToRad(MathUtils.lerp(startPitchDeg, 0, tilt))
+
+    camera.position.set(x, height, z)
+    target.current.set(
+      x + PLAYER_START.dirX * 10,
+      height + Math.tan(pitch) * 10,
+      z + PLAYER_START.dirZ * 10,
+    )
+    camera.lookAt(target.current)
+
+    if (t >= skyFade + hold + drop) setPhase('street')
+  })
+
+  return (
+    <>
+      <NightSky intensity={sky} />
+      {/* Placeholder night lighting until lamps and windows are lit */}
+      <hemisphereLight args={['#1c2640', '#0a0d14', 2 * sky]} />
+      <directionalLight position={[20, 40, 10]} intensity={0.6 * sky} color="#9fb4ff" />
+      {/* Close, dark fog hides the edge of the ground beyond the block */}
+      <fog
+        ref={fog}
+        attach="fog"
+        args={phase === 'street' ? [FOG.color, FOG.near, FOG.far] : [FOG.color, 4, 30]}
+      />
+      {/* Lamps stay on even while hidden, so their shaders are ready (no hitch) */}
+      <Street brightness={running ? Math.max(sky, 0.001) : 1} />
+      {phase === 'street' && <Player />}
+    </>
+  )
+}
