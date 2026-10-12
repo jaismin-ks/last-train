@@ -6,6 +6,15 @@ import { DRACO, LAMP_LIGHT, LAMP_MATERIAL, LAMPS, STREET_MODEL, SUBWAY_LIGHTS } 
 /** Helper objects from the Blender file (e.g. the box that cuts the stairwell hole). */
 const HIDDEN_OBJECTS = ['LT_SubwayHoleCutter']
 
+/** Lowest roughness allowed on imported materials (stops sparkly highlights). */
+const MIN_ROUGHNESS = 0.75
+
+/** Road and sidewalk materials keep their own roughness (the wet road should shine). */
+const GROUND_MATERIALS = ['8k Wet road with puddles', 'Asphalt Ground with crack']
+
+/** Materials whose normal maps use the DirectX convention (green channel flipped). */
+const DIRECTX_NORMALS = ['Asphalt Ground with crack']
+
 /**
  * The street set exported from Blender (optimised with gltf-transform),
  * plus a point light in every street lamp and the subway entrance globes.
@@ -20,6 +29,27 @@ export function Street({ brightness = 1 }: { brightness?: number }) {
       const o = scene.getObjectByName(name)
       if (o) o.visible = false
     }
+  }, [scene])
+
+  // Imported building/prop materials are often shiny or metallic, which makes
+  // lamp highlights sparkle on their normal maps. Make them matte like real
+  // brick and concrete. Road/sidewalk materials keep their sheen.
+  useEffect(() => {
+    scene.traverse((o) => {
+      const mesh = o as Mesh
+      if (!mesh.isMesh) return
+      const mats = (Array.isArray(mesh.material) ? mesh.material : [mesh.material]) as MeshStandardMaterial[]
+      for (const m of mats) {
+        if (!m.isMeshStandardMaterial) continue
+        // Normal maps authored in DirectX convention: flip green for three.js (OpenGL)
+        if (DIRECTX_NORMALS.includes(m.name)) m.normalScale.y = -Math.abs(m.normalScale.y)
+        if (m.name.startsWith('LT_') || GROUND_MATERIALS.includes(m.name)) continue
+        m.metalness = 0
+        m.metalnessMap = null
+        m.roughness = m.roughnessMap ? 1 : Math.max(m.roughness, MIN_ROUGHNESS)
+        m.needsUpdate = true
+      }
+    })
   }, [scene])
 
   // Make the lamp glass glow

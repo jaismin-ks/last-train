@@ -8,7 +8,7 @@
  */
 import { NodeIO } from '@gltf-transform/core'
 import { ALL_EXTENSIONS, KHRDracoMeshCompression } from '@gltf-transform/extensions'
-import { dedup, draco, flatten, instance, join, prune, resample, textureCompress, weld } from '@gltf-transform/functions'
+import { dedup, draco, flatten, join, prune, resample, textureCompress, weld } from '@gltf-transform/functions'
 import draco3d from 'draco3dgltf'
 import sharp from 'sharp'
 
@@ -31,9 +31,9 @@ for (const name of ['KHR_materials_specular', 'KHR_materials_ior', 'KHR_material
 
 await doc.transform(
   dedup(),
-  instance({ min: 2 }), // repeated props/buildings drawn as one
-  flatten(),
-  join(), // fewer draw calls
+  // no instance(): GPU instancing came out with wrong rotations and culling
+  // (windows sticking out of walls and popping in and out)
+  ...(process.env.JOIN === '1' ? [flatten(), join()] : []), // joining distorted some walls; off by default
   prune(), // drops textures orphaned by the removed extensions
   resample(),
   weld(),

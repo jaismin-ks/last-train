@@ -30,6 +30,22 @@ export const LAMP_LIGHT = {
 }
 export const LAMP_MATERIAL = 'Material.014'
 
+/**
+ * Soft night fill so building silhouettes read against the sky.
+ * Raise `sky` / `moon` for a brighter night, lower for darker.
+ */
+export const NIGHT_LIGHT = {
+  skyColor: '#3b4c78', // cool blue from above
+  groundColor: '#14110f', // faint warm bounce from the street
+  sky: 3.2,
+  moonColor: '#a9bcff',
+  moon: 1.2,
+  moonPosition: [-40, 80, 30] as [number, number, number],
+}
+
+/** Street-level fog: far buildings fade out instead of vanishing into black. */
+export const FOG = { color: '#05070d', near: 18, far: 120 }
+
 /** Sidewalk top is 0.15 m above the road; eyes ~1.6 m above that. Real scale. */
 export const EYE_HEIGHT = 0.15 + 1.6
 
@@ -59,8 +75,8 @@ export const SUBWAY_LIGHTS = {
 export const SUBWAY_ENTRANCE = { x: markers.subwayInteract[0], z: markers.subwayInteract[2] }
 
 export const WALK = {
-  speed: 1.3, // forward, metres per second (slow walking pace)
-  backSpeed: 0.8, // retracing steps, slower and hesitant
+  speed: 2.0, // forward, metres per second (brisk walk)
+  backSpeed: 1.2, // retracing steps, slower and hesitant
   maxYawDeg: 55, // how far you can look left / right
   maxPitchUpDeg: 18,
   maxPitchDownDeg: 14,
@@ -74,8 +90,8 @@ export const DESCENT = {
   phoneFade: 0.6, // phone fades to black
   skyFade: 1.2, // then the stars fade in from black
   hold: 0.3, // brief look at the stars before moving
-  drop: 5, // time to reach street level
-  startHeight: 40, // metres above the street (tallest buildings ~23 m)
+  drop: 6, // time to reach street level
+  startHeight: 75, // metres above the street: well above the tallest buildings (~23 m), lost in the high fog
   startPitchDeg: 12, // mostly sky, tower tops in frame so the drop reads
   tiltStart: 0, // camera tilts down for the whole drop
 }

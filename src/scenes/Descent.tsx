@@ -1,14 +1,16 @@
 import { useEffect, useRef, useState } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
-import { Fog, MathUtils, PerspectiveCamera, Vector3 } from 'three'
-import { DESCENT, EYE_HEIGHT, PLAYER_START } from '../data/street'
+import { Color, Fog, MathUtils, PerspectiveCamera, Vector3 } from 'three'
+import { DESCENT, EYE_HEIGHT, FOG, NIGHT_LIGHT, PLAYER_START } from '../data/street'
 import { useGame } from '../store'
 import { NightSky } from './NightSky'
 import { Street } from './Street'
 import { Player } from './Player'
 
 /** Street-level fog; the descent starts thicker and eases to this. */
-const FOG = { color: '#020306', near: 12, far: 70 }
+
+const BLACK = new Color('#000000')
+const FOG_COLOR = new Color(FOG.color)
 
 const ease = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2) // easeInOutCubic
 
@@ -60,6 +62,8 @@ export function Descent() {
     if (fog.current) {
       fog.current.near = MathUtils.lerp(4, FOG.near, p)
       fog.current.far = MathUtils.lerp(30, FOG.far, p)
+      // Pure black up high so fogged buildings vanish into the night sky
+      fog.current.color.copy(BLACK).lerp(FOG_COLOR, p)
     }
     // Keep looking up while above the roofs, then tilt down to the street
     const raw = MathUtils.clamp((t - skyFade - hold) / drop, 0, 1)
@@ -81,13 +85,13 @@ export function Descent() {
     <>
       <NightSky intensity={sky} />
       {/* Placeholder night lighting until lamps and windows are lit */}
-      <hemisphereLight args={['#1c2640', '#0a0d14', 2 * sky]} />
-      <directionalLight position={[20, 40, 10]} intensity={0.6 * sky} color="#9fb4ff" />
+      <hemisphereLight args={[NIGHT_LIGHT.skyColor, NIGHT_LIGHT.groundColor, NIGHT_LIGHT.sky * sky]} />
+      <directionalLight position={NIGHT_LIGHT.moonPosition} intensity={NIGHT_LIGHT.moon * sky} color={NIGHT_LIGHT.moonColor} />
       {/* Close, dark fog hides the edge of the ground beyond the block */}
       <fog
         ref={fog}
         attach="fog"
-        args={phase === 'street' ? [FOG.color, FOG.near, FOG.far] : [FOG.color, 4, 30]}
+        args={phase === 'street' ? [FOG.color, FOG.near, FOG.far] : ['#000000', 4, 30]}
       />
       {/* Lamps stay on even while hidden, so their shaders are ready (no hitch) */}
       <Street brightness={running ? Math.max(sky, 0.001) : 1} />
