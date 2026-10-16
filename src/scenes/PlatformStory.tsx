@@ -30,8 +30,6 @@ type Beat =
 const FLOOR_Y = -10.02
 /** Ends of the platform he can stand on (z); the far end wall is at ~85.8. */
 const PLATFORM_Z = [24.5, 85.2]
-/** Seconds between his moves at the least, so he creeps rather than teleports. */
-const MOVE_EVERY = 5
 /** Number of tubes along the platform. */
 const TUBES = 7
 
@@ -54,9 +52,14 @@ export function PlatformStory() {
     lastMove: -Infinity,
     appearTube: -1,
     appearedAt: -1,
+    keysHeard: false, // his keys, heard before you find him
     lurkPicked: 0, // when he last chose a hiding spot
     lurkLastZ: 0, // where you were then (which way you're heading)
     lastMe: null as Vector3 | null, // where you were last frame
+    approachedAt: -99, // last time you walked toward him
+    finalStrike: false, // the third freeze: he walks all the way to you
+    restUntil: 0, // pausing between walks
+    clearing: false, // walking out of your way
     strikes: 0, // times you've frozen up close (third time, he reaches you)
     closed: 0, // metres YOU have walked toward him (he answers every APPROACH.approachStep)
     moves: 0,
@@ -144,11 +147,19 @@ export function PlatformStory() {
       if (fig) fig.userData.eyesOpen = true
     }
 
-    // The bright light is yours: while it works, he never stands in it
+    // The bright light (while it works) and the camera (while you need it) are yours: he keeps clear of them
     const brightAlive = !['dying', 'dark', 'waitTrain', 'train', 'board', 'boarding'].includes(s.beat)
     const brightZ = tubeZ(S.brightTube)
-    const outOfLight = (z: number, side: number) =>
-      brightAlive && Math.abs(z - brightZ) < FIGURE.brightKeepOut ? brightZ + (Math.sign(z - brightZ) || side) * FIGURE.brightKeepOut : z
+    const cameraNeeded = ['lurk', 'appear', 'presence', 'camera'].includes(s.beat)
+    const zones: { z: number; r: number }[] = []
+    if (brightAlive) zones.push({ z: brightZ, r: FIGURE.brightKeepOut })
+    if (cameraNeeded) zones.push({ z: CCTV_POSITION.z, r: FIGURE.cameraKeepOut })
+    const outOfLight = (z: number, side: number) => {
+      for (const { z: c, r } of zones) if (Math.abs(z - c) < r) z = c + (Math.sign(z - c) || side) * r
+      return z
+    }
+    // where you're meant to be heading right now (he never stands in the way)
+    const goal = s.beat === 'camera' ? CCTV_POSITION.z : s.beat === 'light' || s.beat === 'cameraAfter' ? brightZ : null
 
     /** Where along the platform is `fromMe` metres from you, on his side (kept out of the light). */
     const spotFromMe = (fromMe: number) => {
@@ -167,8 +178,16 @@ export function PlatformStory() {
     if (fig) fig.userData.seen = inView
     Object.assign(fearFocus, fig?.visible && s.revealed ? { active: true, x: fig.position.x, y: fig.position.y + 1.68, z: fig.position.z } : { active: false })
 
-    // He reaches you: it's over. He never says a word.
-    if (s.revealed && near < APPROACH.contact && !game.missed) {
+    // How far YOU just moved toward him (him walking toward you doesn't count)
+    let towardHim = 0
+    if (fig && s.lastMe && s.revealed) {
+      tmp.to.set(fig.position.x - me.x, 0, fig.position.z - me.z).normalize()
+      towardHim = Math.max(0, (me.x - s.lastMe.x) * tmp.to.x + (me.z - s.lastMe.z) * tmp.to.z)
+    }
+    if (towardHim > 0.001) s.approachedAt = now
+
+    // He reaches you: only if you walk into him, or on the last strike. He never says a word.
+    if (s.revealed && near < APPROACH.contact && (towardHim > 0.001 || s.finalStrike) && !game.missed) {
       game.fail(CAUGHT.heading, CAUGHT.line)
       setFootsteps(0)
       return
@@ -176,11 +195,7 @@ export function PlatformStory() {
 
     // Walk at him and he doesn't back off: he comes to you
     if (s.revealed && fig && near < APPROACH.range && !game.panic) {
-      // only your own steps count (him walking toward you doesn't)
-      if (s.lastMe) {
-        tmp.to.set(fig.position.x - me.x, 0, fig.position.z - me.z).normalize()
-        s.closed += Math.max(0, (me.x - s.lastMe.x) * tmp.to.x + (me.z - s.lastMe.z) * tmp.to.z)
-      }
+      s.closed += towardHim
       if (s.closed >= APPROACH.approachStep) {
         s.closed = 0
         // he answers with a step of his own, but never closes the last stretch himself
@@ -195,17 +210,46 @@ export function PlatformStory() {
     } else s.closed = 0
     s.lastMe = (s.lastMe ?? new Vector3()).copy(me)
 
-    /** He creeps closer, walking, but only while you can't see him (caught looking, he freezes mid-step). */
+    /**
+     * He walks the platform: slowly, to a spot a set distance from you (closer
+     * as the night goes on), pauses, then on to another. He keeps clear of the
+     * camera and the light, and if he's between you and where you're going he
+     * walks on past it, out of your way.
+     */
     const creep = () => {
-      if (!fig?.visible || isWalking(fig)) return
-      s.unseenFor = inView ? 0 : s.unseenFor + dt
-      if (s.unseenFor < FIGURE.unseenTime || now - s.lastMove < MOVE_EVERY) return
-      const gap = Math.abs(fig.position.z - me.z)
-      if (gap <= FIGURE.minDistance + 0.5) return
-      walkTo(fig, FIGURE.lane, spotFromMe(Math.max(FIGURE.minDistance, gap - FIGURE.step)), FIGURE_WALK.creep, true)
-      s.lastMove = now
-      s.unseenFor = 0
-      if (s.moves++ % 2 === 0) playPresence('steps') // sometimes you hear him move
+      if (!fig?.visible || game.panic || s.finalStrike) return
+      const band = FIGURE.patrol[s.beat as keyof typeof FIGURE.patrol]
+      if (!band) return
+      // in your way? (between you and where you're heading) — move on past it
+      if (goal !== null && !s.clearing) {
+        const lo = Math.min(me.z, goal) - 1
+        const hi = Math.max(me.z, goal) + 1
+        if (fig.position.z > lo && fig.position.z < hi) {
+          const beyond = goal + Math.sign(goal - me.z || 1) * (FIGURE.cameraKeepOut + 3)
+          walkTo(fig, FIGURE.lane, MathUtils.clamp(beyond, PLATFORM_Z[0], PLATFORM_Z[1]), FIGURE_WALK.creep)
+          s.clearing = true
+          return
+        }
+      }
+      if (isWalking(fig)) return
+      s.clearing = false
+      if (s.restUntil === 0) s.restUntil = now + FIGURE.patrolRest[0] + Math.random() * (FIGURE.patrolRest[1] - FIGURE.patrolRest[0])
+      if (now < s.restUntil) return
+      s.restUntil = 0
+      // a new spot: same side of you as now (mostly), the right distance away, clear of the camera / light / your path
+      const mySide = Math.sign(fig.position.z - me.z) || 1
+      for (let tries = 0; tries < 8; tries++) {
+        const side = tries < 5 ? mySide : -mySide
+        const d = band[0] + Math.random() * (band[1] - band[0])
+        let z = outOfLight(me.z + side * d, side)
+        z = MathUtils.clamp(z, PLATFORM_Z[0], PLATFORM_Z[1])
+        if (goal !== null && z > Math.min(me.z, goal) - 1 && z < Math.max(me.z, goal) + 1) continue
+        if (Math.abs(z - me.z) < band[0] * 0.8) continue
+        walkTo(fig, FIGURE.lane + (Math.random() - 0.5) * 0.8, z, FIGURE_WALK.creep)
+        s.lastMove = now
+        if (!inView && s.moves++ % 3 === 0) playPresence('steps') // sometimes you hear him moving
+        break
+      }
     }
 
     let calm = s.beat === 'calm' // somewhere safe: fear drains (set below for the rituals)
@@ -214,11 +258,16 @@ export function PlatformStory() {
       case 'lurk': {
         // You found him: close enough, looking his way. His eyes open.
         // (or you've backed right into him without looking)
+        // Before you find him: the keys from the street, somewhere close
+        if (!s.keysHeard && !inView && near < S.keysDistance) {
+          s.keysHeard = true
+          playPresence('keys')
+        }
         if ((inView && dist < S.revealDistance) || near < 4) {
           reveal()
           s.seenAt = now
           s.appearedAt = now
-          game.setThought(TEXT.firstSeen)
+          game.setThought(s.keysHeard ? TEXT.firstSeenKeys : TEXT.firstSeen)
           go('presence', now)
           break
         }
@@ -381,6 +430,7 @@ export function PlatformStory() {
         break
 
       case 'train':
+        creep()
         if (game.trainDoorsOpen) {
           game.setCaption(TEXT.board)
           go('board', now)
@@ -388,6 +438,7 @@ export function PlatformStory() {
         break
 
       case 'board': {
+        creep()
         const atDoor = me.x < BOARDING.edgeX && trainDoorCenters.some((d) => Math.abs(d.z - me.z) < BOARDING.doorHalfWidth)
         if (atDoor) {
           game.setCaption(null)
@@ -412,11 +463,13 @@ export function PlatformStory() {
     }
 
     // Fear: rises with him near and in sight, drains when you're safe. At the top you freeze.
-    if (stepFear(now, dt, s.revealed ? near : Infinity, inView, calm) === 'panic' && fig && s.revealed) {
+    const approaching = now - s.approachedAt < 0.8
+    if (stepFear(now, dt, s.revealed ? near : Infinity, inView, calm, approaching) === 'panic' && fig && s.revealed) {
       s.strikes += 1
       if (s.strikes >= FEAR.strikes) {
         // third time: you can't move at all, and he walks all the way to you
         freezeForGood()
+        s.finalStrike = true
         walkTo(fig, me.x, me.z, FIGURE_WALK.toward)
       } else {
         // he walks a little closer and stops; then you can move again

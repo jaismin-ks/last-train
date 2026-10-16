@@ -28,13 +28,19 @@ export const ENDING = {
    *   ambiguous  she got off at her stop without looking back: it sends
    */
   kinds: {
-    followed: { typed: 'mom', send: false, opening: [['She got off early.'], ['So did he.']] },
+    followed: {
+      typed: 'mom',
+      send: false,
+      jess: 'where are you?? are you ok',
+      opening: [['Maya got off early.'], ['So did he.']],
+    },
     ambiguous: {
       typed: 'on my way home',
       send: true,
-      opening: [['She didn’t look back.'], ['She never found out if he got off too.']],
+      jess: 'did you get home??',
+      opening: [['Maya didn’t look back.'], ['She never found out if he got off too.']],
     },
-  } as Record<'followed' | 'ambiguous', { typed: string; send: boolean; opening: string[][] }>,
+  } as Record<'followed' | 'ambiguous', { typed: string; send: boolean; jess: string; opening: string[][] }>,
 
   /** After the opening lines (above, per ending), these screens, one at a time (seconds on screen). */
   screens: [

@@ -31,6 +31,8 @@ export const PLATFORM_STORY = {
   /** He waits this far from you (metres), and re-picks his spot this often (seconds). */
   lurkRange: { min: 9, max: 22, ideal: 14 },
   lurkRepick: 1.2,
+  /** Get this close to him (unseen) and you hear his keys, like on the street. */
+  keysDistance: 18,
   /** He reveals himself when he's on screen and you're this close (metres)... */
   revealDistance: 15,
   /** ...or after this many seconds, under a light you're looking at. */
@@ -84,14 +86,27 @@ export const PLATFORM_STORY = {
 }
 
 /**
- * How he moves: only while you're not looking (he's off screen), and only
- * after he's been unseen for `unseenTime`. Each move brings him `step` metres
- * closer, never nearer than `minDistance`.
+ * How he moves on the platform once he's shown himself: he walks (see
+ * `patrol`), keeping clear of the camera and the bright light while you need
+ * them, and never in the way of where you're going.
  */
 export const FIGURE = {
-  unseenTime: 2.4,
-  step: 6,
-  minDistance: 6,
+  /** While you need the camera he keeps this far (metres) from it. */
+  cameraKeepOut: 6,
+  /**
+   * Once he's shown himself he walks the platform: to a spot this far from
+   * you [min, max] (closer as the night goes on), pausing a few seconds between.
+   */
+  patrol: {
+    presence: [10, 15],
+    camera: [9, 14],
+    cameraAfter: [9, 13],
+    light: [8, 13],
+    waitTrain: [6, 11],
+    train: [6, 10],
+    board: [6, 10],
+  } as Record<string, [number, number]>,
+  patrolRest: [3, 7] as [number, number],
   /** While the bright light works he never comes within this distance (metres) of it. */
   brightKeepOut: 6.5,
   lane: -67.8, // his line along the platform (x), off-centre toward the wall but clear of the vending machine
@@ -124,6 +139,7 @@ export const BOARDING = { doorHalfWidth: 0.85, edgeX: -69.9, fade: 1.4 }
  */
 export const PLATFORM_TEXT = {
   firstSeen: 'Was he there before?',
+  firstSeenKeys: 'Those keys.', // you heard his keys on the street, and again just now
   panic: 'My legs won’t move.',
   cameraNudge: 'If something happens, at least it’ll be on camera.',
   camera: { text: 'Stand where the camera can see you' },

@@ -24,7 +24,7 @@ import { DRACO } from '../data/street'
 /** Rigged, with two animations: Idle (standing, breathing) and Walk (in place, two steps). */
 const FIGURE_MODEL = '/assets/models/figure-rigged.glb'
 /** Walking speed (m/s) the Walk animation's stride matches at normal playback speed. */
-const WALK_CLIP_SPEED = 1.2
+const WALK_CLIP_SPEED = 1.0
 
 /**
  * How he looks. Body: unlit black (no light ever reveals a face or clothes),
@@ -151,11 +151,10 @@ export const stopWalking = (fig: Object3D) => (fig.userData.walk = null)
 /** True while he's on his way somewhere. */
 export const isWalking = (fig: Object3D) => !!fig.userData.walk
 
+type Anim = { mixer: AnimationMixer; idle: AnimationAction; walk: AnimationAction; walkWeight: number }
+
 export const Figure = forwardRef<Group>(function Figure(_, ref) {
   const { scene, animations } = useGLTF(FIGURE_MODEL, DRACO)
-  const anim = useRef<{ mixer: AnimationMixer; idle: AnimationAction; walk: AnimationAction; walkWeight: number } | null>(null)
-  const eyes = useRef<Mesh[]>([])
-  const glows = useRef<Sprite[]>([])
   const blink = useRef({ next: 3, until: 0 })
   const tmp = useMemo(() => new Vector3(), [])
 
@@ -213,8 +212,10 @@ export const Figure = forwardRef<Group>(function Figure(_, ref) {
         b.parent?.add(shell)
       })
     }
-    eyes.current = found
-    glows.current = sprites
+    // keep everything on the copy itself: in development React may build this
+    // twice, and the copy that's drawn must be the one that's animated
+    root.userData.eyes = found
+    root.userData.glows = sprites
 
     // Idle and Walk both run all the time; their weights decide which you see
     const mixer = new AnimationMixer(root)
@@ -222,7 +223,7 @@ export const Figure = forwardRef<Group>(function Figure(_, ref) {
     const idle = mixer.clipAction(clip('Idle'), root).setLoop(LoopRepeat, Infinity).play()
     const walk = mixer.clipAction(clip('Walk'), root).setLoop(LoopRepeat, Infinity).play()
     walk.setEffectiveWeight(0)
-    anim.current = { mixer, idle, walk, walkWeight: 0 }
+    root.userData.anim = { mixer, idle, walk, walkWeight: 0 }
     return root
   }, [scene, animations, mats])
 
@@ -233,7 +234,7 @@ export const Figure = forwardRef<Group>(function Figure(_, ref) {
       mats.eye.dispose()
       mats.glow.map?.dispose()
       mats.glow.dispose()
-      anim.current?.mixer.stopAllAction()
+      ;(model.userData.anim as Anim | undefined)?.mixer.stopAllAction()
     },
     [mats],
   )
@@ -264,7 +265,7 @@ export const Figure = forwardRef<Group>(function Figure(_, ref) {
     root && (root.userData.stepping = stepping)
 
     // Walk while moving, stand otherwise (blending smoothly between the two)
-    const a = anim.current
+    const a = model.userData.anim as Anim | undefined
     if (a) {
       const target = stepping ? 1 : 0
       a.walkWeight += (target - a.walkWeight) * Math.min(1, dt * 5)
@@ -283,9 +284,9 @@ export const Figure = forwardRef<Group>(function Figure(_, ref) {
     }
     // eyes stay shut while he's lurking (the story sets userData.eyesOpen)
     const open = t > b.until && model.parent?.userData.eyesOpen !== false
-    for (const e of eyes.current) e.visible = open
+    for (const e of (model.userData.eyes as Mesh[])) e.visible = open
     // Eye halos keep a minimum size on screen, so they still show far away
-    for (const g of glows.current) {
+    for (const g of (model.userData.glows as Sprite[])) {
       const d = g.getWorldPosition(tmp).distanceTo(camera.position)
       g.scale.setScalar(Math.max(FIGURE_LOOK.eyeGlowSize, d * FIGURE_LOOK.eyeGlowMinAngle))
     }

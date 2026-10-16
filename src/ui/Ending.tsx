@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useGame } from '../store'
 import { ENDING } from '../data/ending'
-import { playKeyTap, playMessageOut } from '../audio/sounds'
+import { playKeyTap, playMessageIn, playMessageOut } from '../audio/sounds'
 import s from './ending.module.css'
 
 const ms = (seconds: number) => seconds * 1000
@@ -72,7 +72,7 @@ export function Ending() {
 
   return (
     <main className={s.ending} style={style} onClick={() => step >= 0 && !leaving && next()}>
-      {step === 0 && <TextHome typedText={kind.typed} send={kind.send} leaving={leaving} onDone={next} />}
+      {step === 0 && <TextHome typedText={kind.typed} send={kind.send} jess={kind.jess} leaving={leaving} onDone={next} />}
       {screen && (
         <div key={step} className={`${s.step} ${leaving ? s.leaving : ''}`}>
           {screen.lines.map((l) => (
@@ -108,11 +108,12 @@ export function Ending() {
 }
 
 /** The chat with Mom from the phone scene; a reply types itself out (and sends, or doesn't). */
-function TextHome({ typedText, send, leaving, onDone }: { typedText: string; send: boolean; leaving: boolean; onDone: () => void }) {
+function TextHome({ typedText, send, jess, leaving, onDone }: { typedText: string; send: boolean; jess: string; leaving: boolean; onDone: () => void }) {
   const c = ENDING.chat
   const [typed, setTyped] = useState('')
   const [sent, setSent] = useState(false)
   const [delivered, setDelivered] = useState(false)
+  const [jessIn, setJessIn] = useState(false) // Jess's message arrives as a notification
 
   useEffect(() => {
     const t: number[] = []
@@ -126,8 +127,12 @@ function TextHome({ typedText, send, leaving, onDone }: { typedText: string; sen
     )
     const sendAt = start + typedText.length * c.perLetter + 0.6
     if (!send) {
-      // she never sends it: the caret just blinks
-      at(sendAt + c.hold, onDone)
+      // she never sends it: the caret just blinks, and Jess is asking where she is
+      at(sendAt + 0.8, () => {
+        setJessIn(true)
+        playMessageIn()
+      })
+      at(sendAt + c.hold + 1.5, onDone)
       return () => t.forEach(clearTimeout)
     }
     at(sendAt, () => {
@@ -136,12 +141,22 @@ function TextHome({ typedText, send, leaving, onDone }: { typedText: string; sen
       playMessageOut()
     })
     at(sendAt + 1.2, () => setDelivered(true))
-    at(sendAt + 1.2 + c.hold, onDone)
+    at(sendAt + 2.6, () => {
+      setJessIn(true)
+      playMessageIn()
+    })
+    at(sendAt + 2.6 + c.hold, onDone)
     return () => t.forEach(clearTimeout)
-  }, [c, onDone, typedText, send])
+  }, [c, onDone, typedText, send, jess])
 
   return (
     <div className={`${s.step} ${leaving ? s.leaving : ''}`}>
+      {jessIn && (
+        <div className={s.notification}>
+          <span className={s.notificationFrom}>Jess</span>
+          <span>{jess}</span>
+        </div>
+      )}
       <div className={s.chat}>
         <div className={s.time}>{c.earlierTime}</div>
         {c.earlier.map((m) => (

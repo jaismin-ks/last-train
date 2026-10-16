@@ -79,14 +79,17 @@ export function Station() {
     }
   }, [free, scene])
 
-  // Platform caption, then it clears after a while
+  // On the platform: the gate slams, the station-closed announcement, then the objective
   useEffect(() => {
     if (!free) return
     const { setCaption } = useGame.getState()
-    setCaption(CAPTIONS.station.onPlatform)
-    // the controls line goes after a while; the objective stays until the story moves on
-    const t = setTimeout(() => setCaption({ text: CAPTIONS.station.onPlatform.text }), 7000)
-    return () => clearTimeout(t)
+    const t = [
+      setTimeout(() => setCaption(CAPTIONS.station.closedAnnouncement), 2800),
+      setTimeout(() => setCaption(CAPTIONS.station.onPlatform), 10500),
+      // the controls line goes after a while; the objective stays until the story moves on
+      setTimeout(() => setCaption({ text: CAPTIONS.station.onPlatform.text }), 17500),
+    ]
+    return () => t.forEach(clearTimeout)
   }, [free])
   const gate = useMemo(() => {
     const g = scene.getObjectByName(GATE.name)

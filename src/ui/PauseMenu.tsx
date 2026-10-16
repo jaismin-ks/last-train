@@ -26,7 +26,8 @@ export function PauseMenu() {
   const muted = useGame((st) => st.muted)
   const volume = useGame((st) => st.volume)
   const reduceMotion = useGame((st) => st.reduceMotion)
-  const { setPaused, setMuted, setVolume, setReduceMotion } = useGame.getState()
+  const soundCaptions = useGame((st) => st.soundCaptions)
+  const { setPaused, setMuted, setVolume, setReduceMotion, setSoundCaptions } = useGame.getState()
   const [confirm, setConfirm] = useState<null | 'resources' | 'restart'>(null)
   const resumeRef = useRef<HTMLButtonElement>(null)
 
@@ -90,6 +91,12 @@ export function PauseMenu() {
               onChange={(e) => setVolume(Number(e.target.value))}
             />
           </label>
+          <div className={s.row}>
+            <span>Sound captions</span>
+            <button className={s.toggle} aria-pressed={soundCaptions} onClick={() => setSoundCaptions(!soundCaptions)}>
+              {soundCaptions ? 'On' : 'Off'}
+            </button>
+          </div>
           <div className={s.row}>
             <span>Reduce motion</span>
             <button className={s.toggle} aria-pressed={reduceMotion} onClick={() => setReduceMotion(!reduceMotion)}>

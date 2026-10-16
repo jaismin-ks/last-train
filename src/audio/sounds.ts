@@ -1,4 +1,31 @@
 import { Howl, Howler } from 'howler'
+import { useGame } from '../store'
+
+/**
+ * Sound captions (pause menu → Sound captions): a short line for the sounds
+ * the story depends on, for players who can't hear them.
+ */
+const CAPTION_FOR = {
+  steps: 'heavy footsteps behind you',
+  cough: 'a man coughs',
+  laugh: 'a man laughs',
+  keys: 'keys jingling, somewhere behind you',
+  clang: 'a metal gate slams shut',
+  trainFar: 'a train, far down the tunnel',
+  chime: 'door chime',
+  doors: 'train doors',
+  brake: 'brakes screeching',
+  ownKeys: 'your keys',
+  lowBattery: 'low battery',
+} as const
+let captionTimer = 0
+export function captionSound(kind: keyof typeof CAPTION_FOR, seconds = 3) {
+  const g = useGame.getState()
+  if (!g.soundCaptions) return
+  g.setSoundCaption(CAPTION_FOR[kind])
+  clearTimeout(captionTimer)
+  captionTimer = window.setTimeout(() => useGame.getState().setSoundCaption(null), seconds * 1000)
+}
 
 // Dev only: lets tests inspect what is playing
 if (import.meta.env.DEV) (window as unknown as { Howler: typeof Howler }).Howler = Howler
@@ -24,7 +51,10 @@ export function playKeyTap() {
 
 export const playMessageOut = () => messageOut.play()
 export const playMessageIn = () => messageIn.play()
-export const playLowBattery = () => lowBattery.play()
+export const playLowBattery = () => {
+  captionSound('lowBattery')
+  return lowBattery.play()
+}
 
 let stepsId: number | null = null
 /**
@@ -127,6 +157,7 @@ const presence = Object.fromEntries(
 
 /** Plays one presence sound (laughs pick one of their recordings at random). */
 export function playPresence(kind: PresenceKind = 'steps') {
+  captionSound(kind)
   const variants = presence[kind]
   const howl = variants[Math.floor(Math.random() * variants.length)]
   const peak = PRESENCE.sounds[kind].volume
@@ -139,11 +170,17 @@ export function playPresence(kind: PresenceKind = 'steps') {
 
 /** Your own keys, taken out (the keys ritual). */
 const ownKeys = sfx('keys-jingle', 0.35)
-export const playOwnKeys = () => ownKeys.play()
+export const playOwnKeys = () => {
+  captionSound('ownKeys', 2)
+  return ownKeys.play()
+}
 
 /** The station gate slamming shut. */
 const clang = new Howl({ src: ['/assets/audio/sfx/metal-clang.mp3'], volume: 0.75, preload: true })
-export const playClang = () => clang.play()
+export const playClang = () => {
+  captionSound('clang')
+  return clang.play()
+}
 
 /** Faint heartbeat while running; fades in and out. */
 const HEARTBEAT_VOLUME = 0.32
@@ -171,11 +208,21 @@ const trainArrive = sfx('train-arrive', 0.9)
 const trainDoors = sfx('train-doors', 0.7)
 const trainChime = sfx('train-chime', 0.6)
 export const TRAIN_ARRIVE_STOPS_AT = 29 // seconds into the arrival sound when the train has stopped
-export const playTrainArrive = () => trainArrive.play()
-export const playTrainDoors = () => trainDoors.play()
-export const playTrainChime = () => trainChime.play()
+export const playTrainArrive = () => {
+  captionSound('trainFar', 5)
+  return trainArrive.play()
+}
+export const playTrainDoors = () => {
+  captionSound('doors', 2)
+  return trainDoors.play()
+}
+export const playTrainChime = () => {
+  captionSound('chime', 2)
+  return trainChime.play()
+}
 /** Braking hard: the loud end of the arrival recording. */
 export function playTrainBrake(volume = 0.8) {
+  captionSound('brake')
   const id = trainArrive.play()
   trainArrive.seek(19, id)
   trainArrive.volume(volume, id)

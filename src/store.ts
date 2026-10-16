@@ -47,6 +47,8 @@ type GameState = {
   muted: boolean // sound off (M or the speaker button), remembered between visits
   volume: number // 0–1 master volume
   reduceMotion: boolean // no head bob or head tilt
+  soundCaptions: boolean // show [footsteps behind you] etc. for story-critical sounds
+  soundCaption: string | null // the sound caption showing right now
   setPhase: (phase: Phase) => void
   setBattery: (battery: number) => void
   setStress: (stress: number) => void
@@ -74,16 +76,19 @@ type GameState = {
   setMuted: (muted: boolean) => void
   setVolume: (volume: number) => void
   setReduceMotion: (on: boolean) => void
+  setSoundCaptions: (on: boolean) => void
+  setSoundCaption: (text: string | null) => void
 }
 
 /** Player settings survive a reload; storage can be blocked, so every access is guarded. */
 const SETTINGS_KEY = 'last-train:settings'
-type Settings = { muted: boolean; volume: number; reduceMotion: boolean }
+type Settings = { muted: boolean; volume: number; reduceMotion: boolean; soundCaptions: boolean }
 function loadSettings(): Settings {
   const fallback = {
     muted: false,
     volume: 1,
     reduceMotion: typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches,
+    soundCaptions: false,
   }
   try {
     return { ...fallback, ...JSON.parse(localStorage.getItem(SETTINGS_KEY) ?? '{}') }
@@ -108,8 +113,8 @@ const devStartPhase = import.meta.env.DEV
 export const useGame = create<GameState>((set, get) => {
   const saveAfter = (patch: Partial<Settings>) => {
     set(patch)
-    const { muted, volume, reduceMotion } = get()
-    saveSettings({ muted, volume, reduceMotion })
+    const { muted, volume, reduceMotion, soundCaptions } = get()
+    saveSettings({ muted, volume, reduceMotion, soundCaptions })
   }
   return {
   phase: devStartPhase ?? 'warning',
@@ -139,6 +144,7 @@ export const useGame = create<GameState>((set, get) => {
   ritual: { phone: null, keys: false },
   attempt: 0,
   ...settings,
+  soundCaption: null,
   setPhase: (phase) => set({ phase }),
   setBattery: (battery) => set({ battery: Math.max(0, Math.min(100, battery)) }),
   setStress: (stress) => set({ stress: Math.max(0, Math.min(1, stress)) }),
@@ -183,5 +189,7 @@ export const useGame = create<GameState>((set, get) => {
   setMuted: (muted) => saveAfter({ muted }),
   setVolume: (volume) => saveAfter({ volume: Math.max(0, Math.min(1, volume)), muted: volume > 0 ? false : get().muted }),
   setReduceMotion: (reduceMotion) => saveAfter({ reduceMotion }),
+  setSoundCaptions: (soundCaptions) => saveAfter({ soundCaptions }),
+  setSoundCaption: (soundCaption) => set({ soundCaption }),
   }
 })

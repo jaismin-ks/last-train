@@ -88,7 +88,13 @@ function Section({ title, items }: { title: string; items: Credit[] }) {
             )}
           </span>
           <span className={s.name}>
-            {c.who}
+            {c.whoUrl ? (
+              <a href={c.whoUrl} target="_blank" rel="noreferrer">
+                {c.who}
+              </a>
+            ) : (
+              c.who
+            )}
             {(c.where || c.license) && <span className={s.meta}>{[c.where, c.license].filter(Boolean).join(' · ')}</span>}
           </span>
         </div>

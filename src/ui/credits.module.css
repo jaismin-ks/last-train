@@ -22,6 +22,8 @@
 .role a { color: inherit; text-decoration: none; }
 .role a:hover, .role a:focus-visible { color: var(--text); text-decoration: underline; text-underline-offset: 3px; outline: none; }
 .name { text-align: left; font-family: var(--font-display); font-size: 18px; line-height: 1.35; display: grid; gap: 1px; }
+.name a { color: inherit; text-decoration: none; }
+.name a:hover, .name a:focus-visible { text-decoration: underline; text-underline-offset: 3px; outline: none; }
 .meta { font-family: var(--font-ui); font-size: 10.5px; letter-spacing: 0.06em; color: var(--text-dim); }
 
 .footer { min-height: 70vh; display: grid; align-content: center; justify-items: center; gap: 34px; padding-bottom: 10vh; }

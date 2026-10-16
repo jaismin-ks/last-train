@@ -98,7 +98,8 @@ export const SUBWAY_ENTRANCE = { x: markers.subwayInteract[0], z: markers.subway
 
 /**
  * Countdowns. Street: the station closes for the night, so you rush to get in.
- * Inside, the clock resets: the last train leaves soon. Seconds, set from the
+ * Inside, the clock resets: the gates to the platform are closing (they slam
+ * behind you on the platform if you make it). Seconds, set from the
  * walks themselves:
  *   street  108 m: ~32 s walking with the two glances back. 36 s leaves a few
  *           seconds for a first-timer to get going; running buys more.
@@ -106,7 +107,8 @@ export const SUBWAY_ENTRANCE = { x: markers.subwayInteract[0], z: markers.subway
  */
 export const COUNTDOWN = {
   street: { seconds: 36, label: 'Station closes in', missed: 'The station gates came down before you got there.' },
-  station: { seconds: 55, label: 'Last train leaves in', missed: 'The doors closed as you reached the platform.' },
+  // inside, the gates to the platform are closing: they slam shut right behind you if you make it
+  station: { seconds: 55, label: 'Gates close in', missed: 'The gates to the platform came down in front of you.' },
   warnAt: 10, // last seconds turn red
 }
 

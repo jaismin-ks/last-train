@@ -39,6 +39,8 @@ export const RIDE = {
   heldStartGap: 15,
   heldStep: 3,
   heldClosest: 3.4, // never closer than this on his own
+  /** Once he's in your carriage he paces it end to end, slowly. */
+  pace: { speed: 0.7, restAtEnd: 2.5, stareFor: 3.5, aisleHalfWidth: 0.6 },
   /** After he's as close as he gets, seconds before the train moves again. */
   resumeAfter: 6,
 
@@ -146,9 +148,12 @@ export const STATIONS = {
 export const RIDE_RITUALS = {
   offerAfter: 5, // seconds into a stretch (once he's around) before the ritual is offered
   ignoreAfter: 16, // offered but not done: the moment passes
+  batteryAtStart: 3, // phone battery (%) on the train; each phone ritual uses 1%, down to 1%
   text: {
     nudge: 'I should tell someone where I am.',
     prompt: 'E|text Jess',
+    /** Already in the chat: Jess (Maya's best friend) asked her to check in. */
+    earlier: { time: 'Today 11:41 PM', text: 'text me when ur on the train!! 🫶' },
     message: 'on the last train, 2nd car. text me back pls',
     perLetter: 0.07,
     hold: 2.5, // after "Not Delivered"

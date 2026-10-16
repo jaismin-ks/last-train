@@ -21,7 +21,7 @@ import { DRACO, SCENE_FADE } from '../data/street'
 import { RIDE as R, RIDE_RITUALS, RIDE_TEXT as TEXT, SEATS, SIREN, STATIONS, TUNNEL } from '../data/ride'
 import { StationStop } from './StationStop'
 import { useGame } from '../store'
-import { playKeyTap, playOwnKeys, playPresence, playTrainBrake, playTrainChime, playTrainDoors, setTrainRun, stopAllAudio } from '../audio/sounds'
+import { playKeyTap, playLowBattery, playOwnKeys, playPresence, playTrainBrake, playTrainChime, playTrainDoors, setTrainRun, stopAllAudio } from '../audio/sounds'
 import { Train, TRAIN_MODEL, trainDoorCenters, trainLights } from './Train'
 import { FreeRoam, autoWalk, cameraShake, seat } from './FreeRoam'
 import { Figure, isWalking, stopWalking, walkTo } from './Figure'
@@ -281,6 +281,10 @@ export function Ride() {
     said: new Set<string>(),
     lastMe: null as Vector3 | null,
     strikes: 0,
+    finalStrike: false, // the third freeze: he walks all the way to you
+    approachedAt: -99, // last time you walked toward him
+    paceDir: 1, // which end of the carriage he's walking to
+    paceRestUntil: 0, // pausing at an end (or after stopping short of you)
     closed: 0,
     rituals: shuffled(),
     ritual: 'none' as 'none' | 'offered' | 'doing' | 'done',
@@ -355,6 +359,7 @@ export function Ride() {
     g.setPlatformLightsOn(true)
     g.setBlackout(1)
     g.setRitual({ phone: null, keys: false })
+    g.setBattery(RIDE_RITUALS.batteryAtStart)
     trainLights.level = 1
     trainLights.emergency = 0
     camera.near = 0.05
@@ -426,8 +431,16 @@ export function Ride() {
     if (fig) fig.userData.seen = inView
     Object.assign(fearFocus, fig?.visible ? { active: true, x: fig.position.x, y: fig.position.y + 1.68, z: fig.position.z } : { active: false })
 
-    // He reaches you: it's over. He never says a word.
-    if (near < APPROACH.contact && !game.missed && s.beat !== 'cut' && s.beat !== 'exit') {
+    // How far YOU just moved toward him (him walking toward you doesn't count)
+    let towardHim = 0
+    if (fig && s.lastMe && inYourCarriage) {
+      tmp.p.set(fig.position.x - me.x, 0, fig.position.z - me.z).normalize()
+      towardHim = Math.max(0, (me.x - s.lastMe.x) * tmp.p.x + (me.z - s.lastMe.z) * tmp.p.z)
+    }
+    if (towardHim > 0.001) s.approachedAt = now
+
+    // He reaches you: only if you walk into him, or on the last strike. He never says a word.
+    if (near < APPROACH.contact && (towardHim > 0.001 || s.finalStrike) && !game.missed && s.beat !== 'cut' && s.beat !== 'exit') {
       game.fail(CAUGHT.heading, CAUGHT.line)
       game.setRitual({ phone: null })
       seat.active = false
@@ -436,11 +449,7 @@ export function Ride() {
 
     // Walk at him and he comes to you
     if (fig && near < APPROACH.range && !game.panic) {
-      // only your own steps count (him walking toward you doesn't)
-      if (s.lastMe) {
-        tmp.p.set(fig.position.x - me.x, 0, fig.position.z - me.z).normalize()
-        s.closed += Math.max(0, (me.x - s.lastMe.x) * tmp.p.x + (me.z - s.lastMe.z) * tmp.p.z)
-      }
+      s.closed += towardHim
       if (s.closed >= APPROACH.approachStep) {
         s.closed = 0
         // a step of his own, but he never closes the last stretch himself
@@ -469,6 +478,31 @@ export function Ride() {
       fig.position.z = me.z + Math.sign(gap || 1) * next
       fig.position.x = MathUtils.clamp(me.x, R.area.minX + 0.3, R.area.maxX - 0.3)
       return next
+    }
+
+    /**
+     * He paces the carriage, slowly, from one end to the other and back. If
+     * you're standing in the aisle in his way he stops short, stares, and
+     * turns back; if you're sitting (or off to the side) he walks right past.
+     */
+    const pace = () => {
+      if (!fig || !inYourCarriage || game.panic || s.finalStrike) return
+      const inAisle = !seat.active && Math.abs(me.x - CAR_X) < R.pace.aisleHalfWidth
+      const ahead = (me.z - fig.position.z) * s.paceDir > 0
+      if (isWalking(fig) && inAisle && ahead && Math.abs(me.z - fig.position.z) < APPROACH.holdOff + 0.4) {
+        stopWalking(fig) // you're in the way: he stops and stares
+        s.paceRestUntil = now + R.pace.stareFor
+        s.paceDir = -s.paceDir
+        return
+      }
+      if (isWalking(fig) || now < s.paceRestUntil) return
+      const end = s.paceDir > 0 ? R.area.maxZ - 0.4 : R.area.minZ + 0.4
+      if (Math.abs(fig.position.z - end) < 0.3) {
+        s.paceDir = -s.paceDir // reached the end: rest, then back the other way
+        s.paceRestUntil = now + R.pace.restAtEnd
+        return
+      }
+      walkTo(fig, CAR_X, end, R.pace.speed)
     }
 
     /** The carriage lights stutter; during the dark moment, `onDark` runs once. */
@@ -550,6 +584,12 @@ export function Ride() {
           s.ritualAt = now
           game.setRitual({ phone: null })
           if (cfg.thought) game.setThought(cfg.thought)
+          // every time she uses the phone, the battery drops; at 1% it warns her
+          if (kind !== 'keys') {
+            const left = Math.max(1, game.battery - 1)
+            game.setBattery(left)
+            if (left === 1) setTimeout(playLowBattery, 1400)
+          }
           game.setStress(0) // it helps, for a moment
           s.nextFlicker = now + 2.5 // ...and then he's closer anyway
         }
@@ -596,8 +636,9 @@ export function Ride() {
         } else {
           calm = ritual(s.since + RIDE_RITUALS.offerAfter)
           // stretch 3: the lights keep failing, and he's closer each time
-          if (s.leg === 3) flicker(() => stepCloser(R.stretch3Step), R.stretch3Flicker)
-          else if (s.ritual === 'done') flicker(() => stepCloser(R.heldStep)) // after the ritual: closer anyway
+          // he walks the carriage end to end; on the last stretch the lights keep failing too
+          pace()
+          if (s.leg === 3) flicker(() => undefined, R.stretch3Flicker)
         }
         if (s.ritual === 'done' && now - s.ritualAt > R.afterRitual) {
           if (s.leg === 2 && !s.said.has('held')) {
@@ -651,6 +692,7 @@ export function Ride() {
       }
 
       case 'resume':
+        pace()
         speed.current = Math.min(1, t / R.accelerate)
         if (t > R.resumeRide) {
           game.setCaption(TEXT.arriving(STATIONS.names[s.leg - 1], lastStation))
@@ -661,6 +703,7 @@ export function Ride() {
         break
 
       case 'arrive': {
+        pace()
         const k = Math.min(1, t / R.arriveTime)
         speed.current = 1 - k
         if (k >= 1) {
@@ -808,11 +851,13 @@ export function Ride() {
     setTrainRun(s.beat === 'cut' ? 0 : speed.current)
     // Fear: rises with him near and in sight. Only the rituals ease it, briefly.
     const fearDist = fig?.visible ? (inYourCarriage ? near : dist) : Infinity
-    if (s.beat !== 'exit' && stepFear(now, Math.min(dt, 0.1), fearDist, inView, calm) === 'panic' && fig && inYourCarriage) {
+    const approaching = now - s.approachedAt < 0.8
+    if (s.beat !== 'exit' && stepFear(now, Math.min(dt, 0.1), fearDist, inView, calm, approaching) === 'panic' && fig && inYourCarriage) {
       s.strikes += 1
       if (s.strikes >= FEAR.strikes) {
         // third time: you can't move at all, and he walks all the way to you
         freezeForGood()
+        s.finalStrike = true
         walkTo(fig, me.x, me.z, FIGURE_WALK.toward)
       } else {
         // he walks a little closer and stops; then you can move again

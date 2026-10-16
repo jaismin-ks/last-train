@@ -12,6 +12,8 @@
 .battery { color: #ff453a; }
 .chat { display: grid; gap: 6px; }
 .to { font-size: 11px; color: #8e8e93; text-align: center; padding-bottom: 6px; border-bottom: 1px solid #1f1f22; }
+.time { font-size: 10px; color: #8e8e93; text-align: center; margin-top: 4px; }
+.incoming { justify-self: start; max-width: 85%; background: #262628; color: #f2f2f7; border-radius: 16px; padding: 7px 11px; font-size: 13px; line-height: 1.3; }
 .bubble { justify-self: end; max-width: 85%; background: #0a84ff; color: #fff; border-radius: 16px; padding: 7px 11px; font-size: 13px; line-height: 1.3; margin-top: 8px; }
 .failed { justify-self: end; font-size: 11px; color: #ff453a; }
 .delivered { justify-self: end; font-size: 11px; color: #8e8e93; }
@@ -21,12 +23,5 @@
 .callState { font-size: 13px; color: #8e8e93; }
 .hangup { margin-top: 110px; width: 52px; height: 52px; border-radius: 50%; background: #ff3b30; }
 
-/* Keys between your fingers, held for the rest of the ride */
-.keys {
-  position: fixed; left: 5%; bottom: -18px; width: 200px; z-index: 6; pointer-events: none;
-  animation: up 0.6s ease both; filter: drop-shadow(0 0 18px rgba(0, 0, 0, 0.9));
-}
 
 @keyframes phoneUp { from { transform: translateY(60%) rotate(-4deg); opacity: 0 } to { transform: translateY(0) rotate(-4deg); opacity: 1 } }
-.keys { animation-name: keysUp; }
-@keyframes keysUp { from { transform: translateY(60%); opacity: 0 } to { transform: translateY(0); opacity: 1 } }

@@ -13,8 +13,9 @@ export const fearFocus = { active: false, x: 0, y: 0, z: 0 }
  *   dist     metres to him (Infinity when he isn't there / hasn't shown himself)
  *   inView   he's on screen
  *   calm     you're somewhere safe (the bright light, the working camera)
+ *   approaching  you've just walked toward him (only then can you freeze up)
  */
-export function stepFear(now: number, dt: number, dist: number, inView: boolean, calm: boolean): 'panic' | null {
+export function stepFear(now: number, dt: number, dist: number, inView: boolean, calm: boolean, approaching = true): 'panic' | null {
   const g = useGame.getState()
   if (g.missed) return null
   let stress = g.stress
@@ -33,7 +34,8 @@ export function stepFear(now: number, dt: number, dist: number, inView: boolean,
     else if (near === 0) rate = -FEAR.fall
     // fear only colours the screen and sound; freezing comes from getting too close
     stress = Math.min(0.95, Math.max(0, stress + rate * dt))
-    if (dist < FEAR.panicDistance && now >= state.calmUntil) {
+    // you freeze when YOU go too close to him (him walking past you doesn't count)
+    if (approaching && dist < FEAR.panicDistance && now >= state.calmUntil) {
       g.setPanic(true)
       state.panicUntil = now + FEAR.panicTime
       event = 'panic'
