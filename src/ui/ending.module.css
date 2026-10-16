@@ -1,0 +1,40 @@
+/* The ending: black, quiet, one thing at a time */
+.ending {
+  position: fixed; inset: 0; background: #000; color: var(--text);
+  display: flex; align-items: center; justify-content: center; padding: 32px;
+  cursor: default; user-select: none;
+}
+.step { max-width: 680px; text-align: center; display: grid; gap: 22px; justify-items: center; animation: in var(--fade) ease both; }
+.leaving { animation: out var(--fade) ease both; }
+
+.line { font-family: var(--font-display); font-weight: 400; font-size: clamp(26px, 3.4vw, 42px); line-height: 1.3; }
+.final { font-style: italic; font-size: clamp(32px, 4.6vw, 58px); }
+.source { font-size: 11px; letter-spacing: 0.12em; color: var(--text-dim); }
+.source a { color: inherit; text-decoration: underline; text-underline-offset: 3px; }
+
+/* The chat with Mom */
+.chat { width: min(360px, 100%); display: grid; gap: 8px; font-family: -apple-system, 'Helvetica Neue', Arial, sans-serif; }
+.time { font-size: 11px; color: #8e8e93; text-align: center; margin: 8px 0 2px; }
+.bubble { max-width: 78%; padding: 8px 13px; border-radius: 18px; font-size: 16px; line-height: 1.3; animation: in 0.5s ease both; }
+.mom { justify-self: start; background: #262628; color: #f2f2f7; }
+.me { justify-self: end; background: #0a84ff; color: #fff; }
+.delivered { justify-self: end; font-size: 11px; color: #8e8e93; animation: in 0.6s ease both; }
+.composer {
+  margin-top: 14px; display: flex; align-items: center; gap: 8px;
+  border: 1px solid #3a3a3c; border-radius: 18px; padding: 7px 7px 7px 14px; min-height: 36px;
+  font-size: 16px; color: #f2f2f7; text-align: left;
+}
+.composerText { flex: 1; }
+.caret { display: inline-block; width: 1.5px; height: 18px; background: #0a84ff; vertical-align: -3px; animation: blink 1s steps(1) infinite; }
+.send { width: 26px; height: 26px; border-radius: 50%; background: #3a3a3c; transition: background 0.2s; }
+.sendReady { background: #0a84ff; }
+
+.skip {
+  position: fixed; right: 22px; bottom: 20px; background: none; border: 0;
+  color: var(--text-dim); font-size: 11px; letter-spacing: 0.25em; text-transform: uppercase; opacity: 0.6;
+}
+.skip:hover, .skip:focus-visible { opacity: 1; color: var(--text); }
+
+@keyframes in { from { opacity: 0 } to { opacity: 1 } }
+@keyframes out { from { opacity: 1 } to { opacity: 0 } }
+@keyframes blink { 50% { opacity: 0 } }

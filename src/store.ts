@@ -12,6 +12,7 @@ export type Phase =
   | 'ride'
   | 'tunnel'
   | 'lastStop'
+  | 'epilogue' // the ending: the text home, the statistics
   | 'endCard'
 
 type GameState = {
@@ -38,6 +39,9 @@ type GameState = {
   missed: boolean // the section failed (countdown ran out, or he reached you)
   panic: boolean // frozen in fear: you can't move or look
   checkpoint: 'platform' | null // Try again on the platform starts you on the platform
+  endingKind: 'followed' | 'ambiguous' // got off early (he followed) / got off at her stop
+  /** What a train ritual is showing on screen: the phone (text / call), and whether the keys are out. */
+  ritual: { phone: null | { kind: 'text'; typed: string; status: '' | 'sending' | 'failed' | 'delivered' } | { kind: 'call'; status: 'calling' | 'talking' | 'ended' }; keys: boolean }
   attempt: number // bumps on Try again, restarting the current section
   muted: boolean // sound off (M or the speaker button), remembered between visits
   volume: number // 0–1 master volume
@@ -63,6 +67,8 @@ type GameState = {
   fail: (heading: string, line: string) => void
   setPanic: (panic: boolean) => void
   setCheckpoint: (checkpoint: 'platform' | null) => void
+  setEndingKind: (kind: 'followed' | 'ambiguous') => void
+  setRitual: (ritual: Partial<GameState['ritual']>) => void
   retry: () => void
   setMuted: (muted: boolean) => void
   setVolume: (volume: number) => void
@@ -128,6 +134,8 @@ export const useGame = create<GameState>((set, get) => {
   missed: false,
   panic: false,
   checkpoint: null,
+  endingKind: 'ambiguous',
+  ritual: { phone: null, keys: false },
   attempt: 0,
   ...settings,
   setPhase: (phase) => set({ phase }),
@@ -152,6 +160,8 @@ export const useGame = create<GameState>((set, get) => {
   fail: (missedHeading, missedLine) => set({ missed: true, missedHeading, missedLine, inputLocked: true, countdown: null }),
   setPanic: (panic) => set({ panic }),
   setCheckpoint: (checkpoint) => set({ checkpoint }),
+  setEndingKind: (endingKind) => set({ endingKind }),
+  setRitual: (ritual) => set((s) => ({ ritual: { ...s.ritual, ...ritual } })),
   retry: () =>
     set((s) => ({
       attempt: s.attempt + 1,
@@ -161,6 +171,7 @@ export const useGame = create<GameState>((set, get) => {
       stamina: 1,
       running: false,
       fear: false,
+      ritual: { phone: null, keys: false },
       stress: 0,
       panic: false,
       thought: null,

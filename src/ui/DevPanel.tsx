@@ -15,6 +15,7 @@ const SCENES: { label: string; query: string }[] = [
   { label: 'Station (walk down)', query: 'phase=platform' },
   { label: 'Platform (story)', query: 'phase=platform&skip=1' },
   { label: 'Train ride', query: 'phase=ride' },
+  { label: 'Ending (text home, stats)', query: 'phase=epilogue' },
   { label: 'Resources', query: 'phase=endCard' },
 ]
 

@@ -13,6 +13,7 @@ import { LocationCard } from './ui/LocationCard'
 import { PauseMenu } from './ui/PauseMenu'
 import { Missed, Timer } from './ui/Timer'
 import { FearVignette } from './ui/FearVignette'
+import { RitualOverlay } from './ui/RitualOverlay'
 import { StaminaBar } from './ui/StaminaBar'
 import { useEffect, useRef } from 'react'
 import type { RootState } from '@react-three/fiber'
@@ -60,6 +61,7 @@ export function Experience() {
       </Suspense>
     </Canvas>
     <FearVignette />
+    <RitualOverlay />
     <Caption />
     <Thought />
     <LocationCard />

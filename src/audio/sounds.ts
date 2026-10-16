@@ -137,6 +137,10 @@ export function playPresence(kind: PresenceKind = 'steps') {
   setTimeout(() => howl.fade(peak, 0, 900, id), Math.max(600, length - 1000)) // and fade away
 }
 
+/** Your own keys, taken out (the keys ritual). */
+const ownKeys = sfx('keys-jingle', 0.35)
+export const playOwnKeys = () => ownKeys.play()
+
 /** The station gate slamming shut. */
 const clang = new Howl({ src: ['/assets/audio/sfx/metal-clang.mp3'], volume: 0.75, preload: true })
 export const playClang = () => clang.play()
