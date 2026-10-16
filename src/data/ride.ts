@@ -119,7 +119,7 @@ export const RIDE_TEXT = {
   doorsLabel: 'Doors close in',
 }
 
-/** The three stations: names on the walls, and how long the doors stay open for you to decide. */
+/** The three stations: names on their signs, and how long the doors stay open for you to decide. */
 export const STATIONS = {
   names: ['KINGSWAY', 'ASHDALE', 'ELM PARK'],
   doorsOpenFor: 9, // seconds to decide (stations 1 and 2)
@@ -134,14 +134,12 @@ export const STATIONS = {
   model: {
     edgeX: -71.75, // its platform edge, just past the train doors (-71.86)
     floorY: -9.97, // level with the carriage floor
-    wallX: 4.0, // back wall, metres from the edge (model space)
-    signs: [-18, -6, 6, 18], // name signs along the wall (z, model space)
     lights: [-21, -7, 7, 21], // tube lights under the ceiling (z)
     lightX: 2.0,
     lightY: 2.55,
     lightIntensity: 9,
   },
-  colors: { trim: '#1e3a5f', light: '#e8fff4' },
+  colors: { light: '#e8fff4' },
 }
 
 /** Rituals on the train (one per stretch, random order). Press E when offered. */
