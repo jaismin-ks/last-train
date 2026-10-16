@@ -6,6 +6,7 @@ import { FilmGrain } from './ui/FilmGrain'
 import { Experience } from './Experience'
 import { Resources } from './ui/Resources'
 import { Ending } from './ui/Ending'
+import { Credits } from './ui/Credits'
 import { AudioSettings, Hud } from './ui/Hud'
 import { DevPanel } from './ui/DevPanel'
 
@@ -16,6 +17,7 @@ function Screen() {
   if (phase === 'start') return <StartScreen />
   if (phase === 'epilogue') return <Ending />
   if (phase === 'endCard') return <Resources />
+  if (phase === 'credits') return <Credits />
   return <Experience />
 }
 

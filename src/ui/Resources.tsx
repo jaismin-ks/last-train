@@ -1,4 +1,5 @@
 import { RESOURCES, RESOURCES_SCREEN } from '../data/captions'
+import { useGame } from '../store'
 import s from './hud.module.css'
 
 /** Support resources: from the content warning, the pause menu, or the end of the story. */
@@ -24,6 +25,9 @@ export function Resources() {
 
         <button className={s.button} onClick={() => location.assign(location.pathname)}>
           Back to the start
+        </button>
+        <button className={`${s.button} ${s.quiet}`} onClick={() => useGame.getState().setPhase('credits')}>
+          Credits
         </button>
       </div>
     </main>

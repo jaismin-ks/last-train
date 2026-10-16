@@ -14,6 +14,7 @@ export type Phase =
   | 'lastStop'
   | 'epilogue' // the ending: the text home, the statistics
   | 'endCard'
+  | 'credits'
 
 type GameState = {
   phase: Phase

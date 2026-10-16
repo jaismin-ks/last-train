@@ -17,6 +17,7 @@ const SCENES: { label: string; query: string }[] = [
   { label: 'Train ride', query: 'phase=ride' },
   { label: 'Ending (text home, stats)', query: 'phase=epilogue' },
   { label: 'Resources', query: 'phase=endCard' },
+  { label: 'Credits', query: 'phase=credits' },
 ]
 
 const panel: React.CSSProperties = {

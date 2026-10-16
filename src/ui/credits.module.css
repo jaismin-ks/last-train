@@ -1,0 +1,26 @@
+/* Credits: a quiet, scrolling list on black */
+.page { position: fixed; inset: 0; overflow-y: auto; background: #000; color: var(--text); padding: 72px 24px 96px; animation: fade 1.2s ease both; }
+.inner { width: min(640px, 100%); margin: 0 auto; display: grid; gap: 44px; }
+.header { text-align: center; display: grid; gap: 8px; }
+.title { font-family: var(--font-display); font-weight: 400; font-size: clamp(44px, 7vw, 72px); line-height: 1; }
+.subtitle { font-family: var(--font-display); font-style: italic; color: var(--text-dim); font-size: 20px; }
+.by { margin-top: 10px; font-size: 11px; letter-spacing: 0.3em; text-transform: uppercase; color: var(--text-dim); }
+
+.group { display: grid; gap: 14px; }
+.groupTitle { font-size: 11px; font-weight: 400; letter-spacing: 0.3em; text-transform: uppercase; color: var(--text-dim); border-bottom: 1px solid rgba(232, 236, 233, 0.12); padding-bottom: 10px; }
+.list { list-style: none; display: grid; gap: 12px; }
+.item { display: grid; gap: 3px; }
+.what { font-family: var(--font-display); font-size: 19px; line-height: 1.25; }
+.what a { color: inherit; text-decoration: none; border-bottom: 1px solid rgba(232, 236, 233, 0.25); }
+.what a:hover, .what a:focus-visible { border-bottom-color: var(--text); outline: none; }
+.meta { font-size: 12px; color: var(--text-dim); letter-spacing: 0.02em; line-height: 1.5; }
+
+.note { font-size: 12px; color: var(--text-dim); text-align: center; line-height: 1.6; }
+.back {
+  justify-self: center; padding: 13px 40px; background: transparent; color: var(--text);
+  border: 1px solid rgba(232, 236, 233, 0.45); font-size: 12px; letter-spacing: 0.25em; text-transform: uppercase;
+  transition: background 0.3s, color 0.3s;
+}
+.back:hover, .back:focus-visible { background: var(--text); color: #000; outline: none; }
+
+@keyframes fade { from { opacity: 0 } to { opacity: 1 } }
