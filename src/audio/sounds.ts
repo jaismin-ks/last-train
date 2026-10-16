@@ -158,3 +158,29 @@ export function setHeartbeat(on: boolean) {
     })
   }
 }
+
+/** Freezes every sound where it is (pause menu) and picks up again on resume. */
+export function setAudioPaused(paused: boolean) {
+  const ctx = Howler.ctx
+  if (!ctx) return
+  if (paused && ctx.state === 'running') void ctx.suspend()
+  if (!paused && ctx.state === 'suspended') void ctx.resume()
+}
+
+/** Silences everything for good (leaving the game for the resources screen). */
+export function stopAllAudio(fadeMs = 800) {
+  ambienceOn = stationOn = escalatorOn = heartbeatOn = false
+  setAudioPaused(false)
+  const master = Howler.volume()
+  const start = performance.now()
+  const step = () => {
+    const k = Math.min(1, (performance.now() - start) / fadeMs)
+    Howler.volume(master * (1 - k))
+    if (k < 1) requestAnimationFrame(step)
+    else {
+      Howler.stop()
+      Howler.volume(master)
+    }
+  }
+  step()
+}

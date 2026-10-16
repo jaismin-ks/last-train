@@ -40,6 +40,7 @@ export function FreeRoam({ area, collide, start, startHeading }: { area: Area; c
     const el = gl.domElement
     const lock = () => el.requestPointerLock?.()
     const onMove = (e: MouseEvent) => {
+      if (document.pointerLockElement !== el) return // menu open or mouse released
       yaw.current -= e.movementX * MOUSE_SENSITIVITY
       pitch.current = MathUtils.clamp(pitch.current - e.movementY * MOUSE_SENSITIVITY, -1.2, 1.2)
     }
@@ -116,7 +117,7 @@ export function FreeRoam({ area, collide, start, startHeading }: { area: Area; c
     }
     setFootsteps(advanced ? (running ? 1.75 : 1.2) : 0)
     if (advanced) bob.current += dt * WALK.bobSpeed * (running ? 1.6 : 1)
-    const bobY = advanced ? Math.sin(bob.current) * WALK.bobAmount : 0
+    const bobY = advanced ? Math.sin(bob.current) * WALK.bobAmount * (useGame.getState().reduceMotion ? 0 : 1) : 0
 
     camera.position.set(pos.x, area.floorY + EYE_ABOVE_FLOOR + bobY, pos.z)
     const cp = Math.cos(pitch.current)

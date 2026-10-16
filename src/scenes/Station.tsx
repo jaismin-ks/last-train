@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
 import { useGLTF } from '@react-three/drei'
-import { DoubleSide, Vector3, type Mesh, type MeshStandardMaterial, type PerspectiveCamera } from 'three'
+import { Box3, DoubleSide, Vector3, type Mesh, type MeshStandardMaterial, type PerspectiveCamera } from 'three'
 import { DRACO, SCENE_FADE } from '../data/street'
 import { useGame } from '../store'
 import { type PresenceKind, playClang, setEscalatorVolume, setFootsteps, startStationAmbience, stopAmbience, stopEscalator, stopStationAmbience } from '../audio/sounds'
@@ -12,6 +12,7 @@ import { FreeRoam, type Area } from './FreeRoam'
 import { StationLights } from './StationLights'
 import { EscalatorLights } from './EscalatorLights'
 import { Train } from './Train'
+import { disposeTree } from '../systems/dispose'
 import { PlatformLights } from './PlatformLights'
 import { StreetEffects } from './StreetEffects'
 
@@ -27,6 +28,8 @@ const ROUTE = FULL_ROUTE.slice(0, PLATFORM_START + 1)
 const PLATFORM: Area = { minX: -70.3, maxX: -66.5, minZ: 24.0, maxZ: 90.0, floorY: -10.02 }
 /** The barred gate that drops shut behind you once you're on the platform. */
 const GATE = { name: 'LT_EntranceGate', drop: 5.2, time: 1.6 }
+/** Once you're on the platform, station parts outside this box are dropped from memory. */
+const KEEP = new Box3(new Vector3(-82, -16, 16), new Vector3(-56, 4, 100))
 /** Escalator machinery hum gets louder near these points (lower escalators). */
 const HUM_SOURCES = (markers.escalatorSounds as V3[]).map((p) => new Vector3(...p))
 /** The lower escalator: once you step on, it carries you down by itself (m/s along the route). */
@@ -46,6 +49,24 @@ export function Station() {
   const setBlackout = useGame((s) => s.setBlackout)
   const start = useRef<number | null>(null)
   const [free, setFree] = useState<{ heading: number; at: Vector3 } | null>(null)
+  // On the platform for good: drop the hall, escalators and corridors from memory
+  useEffect(() => {
+    if (!free) return
+    stopEscalator()
+    const box = new Box3()
+    const drop: Mesh[] = []
+    scene.traverse((o) => {
+      const mesh = o as Mesh
+      if (!mesh.isMesh || mesh.name === GATE.name) return
+      if (!box.setFromObject(mesh).intersectsBox(KEEP)) drop.push(mesh)
+    })
+    for (const m of drop) {
+      m.visible = false
+      disposeTree(m)
+      m.removeFromParent()
+    }
+  }, [free, scene])
+
   // Platform caption, then it clears after a while
   useEffect(() => {
     if (!free) return
@@ -108,7 +129,7 @@ export function Station() {
     // Escalator hum: louder the closer you are to a running escalator
     const d = Math.min(...HUM_SOURCES.map((p) => p.distanceTo(camera.position)))
     const k = Math.max(0, 1 - d / HUM.reach)
-    setEscalatorVolume(HUM.volume * k * k * fade)
+    if (!free) setEscalatorVolume(HUM.volume * k * k * fade)
 
     // The gate slams down behind you once you're on the platform
     if (free && gate) {
@@ -131,8 +152,9 @@ export function Station() {
       <fog attach="fog" args={['#03110b', 5, 55]} />
       {/* Faint green fill so the darkness between lights isn't pure black */}
       <hemisphereLight args={['#2f6b4f', '#050807', 0.9]} />
-      <StationLights route={ROUTE} />
-      <EscalatorLights />
+      {/* hall/escalator lights aren't needed once you're on the platform */}
+      {!free && <StationLights route={ROUTE} />}
+      {!free && <EscalatorLights />}
       <PlatformLights />
       {/* Parked for now; arrival comes later */}
       <Train />

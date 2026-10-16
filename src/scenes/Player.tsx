@@ -200,7 +200,7 @@ export function Player({
 
     // Subtle head bob while moving
     if (moving !== 0 && !riding) bob.current += dt * WALK.bobSpeed * (moving > 0 ? (running ? 1.6 : 1) : 0.7)
-    const bobY = moving !== 0 && !riding ? Math.sin(bob.current) * WALK.bobAmount : 0 // standing still on the escalator
+    const bobY = moving !== 0 && !riding ? Math.sin(bob.current) * WALK.bobAmount * (useGame.getState().reduceMotion ? 0 : 1) : 0 // standing still on the escalator
 
     camera.position.set(pos.x, pos.y + bobY, pos.z)
 
@@ -224,7 +224,7 @@ export function Player({
     )
     camera.lookAt(look)
     // head tilts into the turn
-    if (glanceK > 0 && glance.current) camera.rotateZ(-glance.current.side * MathUtils.degToRad(LOOK_BACK.tiltDeg) * glanceK)
+    if (glanceK > 0 && glance.current && !useGame.getState().reduceMotion) camera.rotateZ(-glance.current.side * MathUtils.degToRad(LOOK_BACK.tiltDeg) * glanceK)
   })
 
   return street ? <SubwayInteract onEnter={() => (frozen.current = true)} /> : null

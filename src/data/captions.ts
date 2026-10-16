@@ -37,8 +37,16 @@ export const THOUGHTS = {
 }
 
 /** Support resources, shown in the pause menu. Verify numbers before launch. */
+/** Support lines shown on the resources screen (tel: makes them tappable on phones). */
 export const RESOURCES = [
-  { name: "Assaulted Women's Helpline (Ontario)", contact: '1-866-863-0511' },
-  { name: 'Kids Help Phone', contact: '1-800-668-6868 · text 686868' },
-  { name: 'Toronto Rape Crisis Centre', contact: '416-597-8808' },
+  { name: "Assaulted Women's Helpline (Ontario)", contact: '1-866-863-0511', tel: '18668630511', note: '24/7, free, confidential' },
+  { name: 'Toronto Rape Crisis Centre', contact: '416-597-8808', tel: '4165978808', note: '24-hour crisis line' },
+  { name: 'Kids Help Phone', contact: '1-800-668-6868 · text 686868', tel: '18006686868', note: 'for young people, 24/7' },
 ]
+
+/** Copy for the resources screen (reached from the content warning, the pause menu, or the end). */
+export const RESOURCES_SCREEN = {
+  title: "You're not alone.",
+  lede: 'If anything here stayed with you, or felt familiar, these people are there to listen.',
+  emergency: 'If you are in danger right now, call 911.',
+}
