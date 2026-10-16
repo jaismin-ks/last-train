@@ -11,7 +11,9 @@ export function Thought() {
   useEffect(() => {
     if (!thought) return
     setShown(thought)
-    const t = setTimeout(() => setThought(null), THOUGHTS.duration * 1000)
+    // short lines are read at a glance; longer ones stay a little longer
+    const seconds = Math.min(5.5, Math.max(THOUGHTS.duration * 0.8, 1.6 + thought.length * 0.055))
+    const t = setTimeout(() => setThought(null), seconds * 1000)
     return () => clearTimeout(t)
   }, [thought, setThought])
 
@@ -23,7 +25,9 @@ export function Thought() {
         left: 0,
         right: 0,
         bottom: '24%',
+        padding: '0 18%',
         textAlign: 'center',
+        lineHeight: 1.35,
         pointerEvents: 'none',
         zIndex: 6,
         fontFamily: 'var(--font-display)',

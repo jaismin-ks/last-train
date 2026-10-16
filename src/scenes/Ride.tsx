@@ -22,8 +22,8 @@ import { RIDE as R, RIDE_RITUALS, RIDE_TEXT as TEXT, SEATS, SIREN, STATIONS, TUN
 import { StationStop } from './StationStop'
 import { useGame } from '../store'
 import { playKeyTap, playOwnKeys, playPresence, playTrainBrake, playTrainChime, playTrainDoors, setTrainRun, stopAllAudio } from '../audio/sounds'
-import { Train, TRAIN_MODEL, trainLights } from './Train'
-import { FreeRoam, cameraShake, seat } from './FreeRoam'
+import { Train, TRAIN_MODEL, trainDoorCenters, trainLights } from './Train'
+import { FreeRoam, autoWalk, cameraShake, seat } from './FreeRoam'
 import { Figure, isWalking, stopWalking, walkTo } from './Figure'
 import { addFear, fearFocus, freezeForGood, resetFear, stepFear } from '../systems/fear'
 import { APPROACH, CAUGHT, FEAR, FIGURE_WALK } from '../data/fear'
@@ -287,6 +287,8 @@ export function Ride() {
     ritualAt: 0, // when it was offered / started / finished
     ePressed: false,
     textPending: false, // a text that didn't send: it goes through at the next station
+    exitDoorZ: 0, // the door you got off through
+    prevX: 0, // your x last frame (walking toward a door?)
     countdown: 0,
   })
   const tmp = useMemo(() => ({ frustum: new Frustum(), m: new Matrix4(), p: new Vector3() }), [])
@@ -331,7 +333,7 @@ export function Ride() {
   // Dev only: N skips ahead (speeds through the current beat)
   useEffect(() => {
     if (!import.meta.env.DEV) return
-    ;(window as unknown as { __ride: unknown }).__ride = { st, figure, station } // dev: inspect the story
+    ;(window as unknown as { __ride: unknown }).__ride = { st, figure, station, seat, autoWalk, doors: trainDoorCenters } // dev: inspect the story
     const onKey = (e: KeyboardEvent) => {
       if (e.code !== 'KeyN') return
       const s = st.current
@@ -491,12 +493,13 @@ export function Ride() {
         s.ritual = 'offered'
         s.ritualAt = now
         s.ePressed = false
-        game.setCaption(cfg.caption)
+        game.setThought(cfg.nudge) // her idea, not an order; the key hint shows below
       }
       if (s.ritual === 'offered') {
         if (s.ePressed) {
           s.ritual = 'doing'
           s.ritualAt = now
+          s.ePressed = false
           game.setCaption(null)
           if (kind === 'keys') {
             game.setRitual({ keys: true })
@@ -510,7 +513,9 @@ export function Ride() {
       }
       if (s.ritual === 'doing') {
         const rt = now - s.ritualAt
-        let finished = false
+        // E again puts the phone away
+        let finished = s.ePressed && rt > 0.4
+        s.ePressed = false
         if (kind === 'text') {
           const msg = RIDE_RITUALS.text.message
           const typedEnd = msg.length * RIDE_RITUALS.text.perLetter
@@ -528,7 +533,8 @@ export function Ride() {
             if (game.ritual.phone?.kind === 'text' && game.ritual.phone.status !== 'failed')
               game.setRitual({ phone: { kind: 'text', typed: '', status: 'failed' } })
           } else finished = true
-          if (finished) s.textPending = true
+          // it only goes through later if you actually hit send
+          if (finished && rt >= typedEnd) s.textPending = true
         } else if (kind === 'call') {
           const L = RIDE_RITUALS.call.lines
           const talkEnd = 1.2 + L.length * RIDE_RITUALS.call.perLine
@@ -537,12 +543,13 @@ export function Ride() {
           const line = Math.floor((rt - 1.2) / RIDE_RITUALS.call.perLine)
           if (rt >= 1.2 && line < L.length) once(`call${s.leg}-${line}`, () => game.setThought(L[line]))
           if (rt > talkEnd + 1.4) finished = true
-        } else finished = rt > 1.5
+          if (finished && game.ritual.phone?.kind === 'call') game.setRitual({ phone: { kind: 'call', status: 'ended' } })
+        } else finished = finished || rt > 1.5
         if (finished) {
           s.ritual = 'done'
           s.ritualAt = now
           game.setRitual({ phone: null })
-          game.setThought(cfg.thought)
+          if (cfg.thought) game.setThought(cfg.thought)
           game.setStress(0) // it helps, for a moment
           s.nextFlicker = now + 2.5 // ...and then he's closer anyway
         }
@@ -672,7 +679,7 @@ export function Ride() {
           once(`open${s.leg}`, () => {
             game.setTrainDoorsOpen(true)
             playTrainDoors()
-            area.maxX = STATIONS.openMaxX // you can step out through an open door
+            area.maxX = STATIONS.doorwayX // you can walk into an open doorway (the frames still block elsewhere)
             game.setCaption(lastStation ? TEXT.lastStop : TEXT.choice)
             if (!lastStation) {
               game.setThought(TEXT.choiceThoughts[s.leg - 1])
@@ -685,20 +692,20 @@ export function Ride() {
               setTimeout(() => useGame.getState().setThought(RIDE_RITUALS.text.deliveredThought), 2600)
             }
           })
-        if (me.x > STATIONS.exitX) {
-          // she gets off
+        // Walk up to an open door and you step off onto the platform
+        const door = game.trainDoorsOpen && t > 2 ? trainDoorCenters.find((d) => Math.abs(d.z - me.z) < STATIONS.doorReach) : undefined
+        // (only by walking into it: standing beside a door when it opens doesn't count)
+        if (door && me.x > STATIONS.doorSideX && me.x - s.prevX > 0.0005) {
           game.setCaption(null)
           game.setCountdown(null)
+          game.setPrompt(null)
           game.setInputLocked(true)
+          game.setRitual({ phone: null })
+          if (seat.active) seat.active = false
           game.setEndingKind(lastStation ? 'ambiguous' : 'followed')
-          if (!lastStation && fig) {
-            // he gets off too: out of the next door along, walking after you
-            stopWalking(fig)
-            const doorZ = me.z + (fig.position.z > me.z ? 5 : -5)
-            fig.position.set(-71.2, R.area.floorY, doorZ)
-            fig.visible = true
-            walkTo(fig, -69.6, me.z + Math.sign(doorZ - me.z) * 1.8, FIGURE_WALK.toward)
-          }
+          // out through the middle of the door, a couple of steps onto the platform, facing the wall
+          Object.assign(autoWalk, { active: true, x: STATIONS.stepOutX, z: door.z, speed: 1.5, face: Math.PI / 2 })
+          s.exitDoorZ = door.z
           go('exit')
           break
         }
@@ -733,9 +740,24 @@ export function Ride() {
         }
         break
 
-      case 'exit':
+      case 'exit': {
+        const followed = game.endingKind === 'followed'
+        if (followed && fig && t > 1.3)
+          once('follows', () => {
+            // he gets off too, out of the next door along; you turn and see him
+            const other = trainDoorCenters
+              .filter((d) => Math.abs(d.z - s.exitDoorZ) > 2)
+              .sort((a, b) => Math.abs(a.z - s.exitDoorZ) - Math.abs(b.z - s.exitDoorZ))[0]
+            const z = other?.z ?? s.exitDoorZ + 5
+            stopWalking(fig)
+            fig.position.set(-72.3, R.area.floorY, z)
+            fig.userData.eyesOpen = true
+            fig.visible = true
+            walkTo(fig, STATIONS.stepOutX, z + Math.sign(s.exitDoorZ - z) * 1.2, FIGURE_WALK.toward)
+            autoWalk.face = Math.atan2(-72.3 - me.x, z - me.z)
+          })
         // a few seconds on the platform, then black, the chime ringing over silence
-        if (t > (game.endingKind === 'followed' ? 2.6 : 1.6)) {
+        if (t > (followed ? 3.6 : 2.0)) {
           game.setBlackout(1)
           stopAllAudio(50)
           setTimeout(playTrainChime, 150) // after everything else has stopped
@@ -743,10 +765,14 @@ export function Ride() {
         }
         break
 
+      }
+
       case 'cut':
         if (t > 3.5) game.setPhase('epilogue')
         break
     }
+
+    s.prevX = me.x
 
     // The station slides past as the train moves (in, then away)
     if (station.current < 9000) station.current += speed.current * TUNNEL.topSpeed * Math.min(dt, 0.1)
@@ -762,8 +788,17 @@ export function Ride() {
       }
     }
     nearSeat.current = nearest
+    const ritualCfg = RIDE_RITUALS[s.rituals[s.leg - 1]]
     const prompt =
-      s.beat === 'cut' || s.beat === 'exit' || s.ritual === 'offered' ? null : seat.active ? SEATS.standPrompt : nearest ? SEATS.sitPrompt : null
+      s.beat === 'cut' || s.beat === 'exit' || s.ritual === 'doing'
+        ? null
+        : s.ritual === 'offered'
+          ? ritualCfg.prompt
+          : seat.active
+            ? SEATS.standPrompt
+            : nearest
+              ? SEATS.sitPrompt
+              : null
     if (game.prompt !== prompt) game.setPrompt(prompt)
 
     // During the emergency everything else dims, so the siren's red carries the scene

@@ -12,19 +12,13 @@ export const CAPTIONS = {
     sendReply: { text: 'Send it', sub: 'Tap the send button' },
   },
   station: {
-    findPlatform: {
-      text: 'Get down to the platform before the last train leaves',
-      sub: 'Just hold W to keep walking  ·  Shift to run  ·  the way leads you there',
-    },
-    onPlatform: { text: 'Wait for the train', sub: 'WASD to walk  ·  Mouse to look (to the edge to turn)  ·  Shift to run' },
+    findPlatform: { text: 'Get to the platform', sub: 'Hold W to keep walking  ·  Shift to run' },
+    onPlatform: { text: 'Wait for the train', sub: 'WASD to move  ·  Mouse to look' },
   },
   street: {
     // shown once when you land, like a film chapter heading
     location: { time: '11:58 PM', place: '25 St.' },
-    findSubway: {
-      text: 'Get to the subway before the station closes',
-      sub: 'Just hold W to keep walking  ·  Shift to run  ·  the street leads you there',
-    },
+    findSubway: { text: 'Get to the station before it closes', sub: 'Hold W to keep walking  ·  Shift to run' },
   },
 }
 
@@ -38,8 +32,8 @@ export const STREET_CAPTION_TIME = 8
 export const THOUGHTS = {
   afterGlance: ['Was someone there?', 'Just keep walking.'],
   along: [{ at: 0.93, text: 'Almost there.' }],
-  duration: 3.2, // seconds on screen
-  gateClosed: "Last train... they've locked the station behind me.",
+  duration: 3.2, // seconds on screen (longer lines stay a little longer)
+  gateClosed: 'They’ve closed the gates behind me.',
 }
 
 /** Support resources, shown in the pause menu. Verify numbers before launch. */

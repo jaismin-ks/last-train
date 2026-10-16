@@ -15,8 +15,22 @@
  *   board     walk into a door → fade to black → the ride
  */
 export const PLATFORM_STORY = {
-  /** Where he waits at first: against the back wall, under the dead light. */
-  lurkAt: { x: -66.75, z: 72 },
+  /**
+   * Where he can be waiting, eyes shut, before you find him: dark spots along
+   * the platform. While you explore he moves (unseen) to a spot ahead of
+   * wherever you're heading, so the first time you see him is where you are.
+   */
+  lurkSpots: [
+    { x: -66.75, z: 36 }, // under the dead light by the gate end
+    { x: -69.5, z: 41 }, // near the platform edge, same dark stretch
+    { x: -66.9, z: 52 }, // by the wall past the benches
+    { x: -66.75, z: 72 }, // under the second dead light
+    { x: -69.4, z: 76 }, // edge, far dark stretch
+    { x: -67.3, z: 84.5 }, // far end corner
+  ],
+  /** He waits this far from you (metres), and re-picks his spot this often (seconds). */
+  lurkRange: { min: 9, max: 22, ideal: 14 },
+  lurkRepick: 1.2,
   /** He reveals himself when he's on screen and you're this close (metres)... */
   revealDistance: 15,
   /** ...or after this many seconds, under a light you're looking at. */
@@ -104,14 +118,20 @@ export const TRAIN_ARRIVAL = {
 export const BOARDING = { doorHalfWidth: 0.85, edgeX: -69.9, fade: 1.4 }
 
 /** Lines and captions for the platform. */
+/**
+ * What she thinks, and the few plain objectives. Her thoughts carry the story;
+ * they never explain it. Objectives stay short.
+ */
 export const PLATFORM_TEXT = {
   firstSeen: 'Was he there before?',
-  panic: "Move. Move. Why can't I move?",
+  panic: 'My legs won’t move.',
+  cameraNudge: 'If something happens, at least it’ll be on camera.',
   camera: { text: 'Stand where the camera can see you' },
-  cameraDead: "Its light's off. It's not even recording.",
-  ritual: { text: 'Stand under the brightest light' },
-  calm: 'Okay. Anyone can see me here.',
-  dark: 'No. No, no, no.',
+  cameraDead: 'The light’s off.',
+  lightNudge: 'Stay in the light.',
+  ritual: { text: 'Stay where it’s brightest' },
+  calm: 'Anyone would see me here.',
+  dark: 'No. No, no.',
   trainHeard: 'Finally.',
   board: { text: 'Get on the train' },
 }

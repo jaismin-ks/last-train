@@ -1,8 +1,19 @@
+import { useEffect, useState } from 'react'
 import { useGame } from '../store'
 
-/** Interaction hint at the bottom of the screen ("Press E to enter"). */
+/**
+ * Small interaction hint above the caption: a key chip and a quiet word,
+ * e.g. "E|text Jess" shows [E] text Jess. Fades in and out.
+ */
 export function Prompt() {
   const prompt = useGame((s) => s.prompt)
+  // keep the last text while fading out, so it doesn't vanish mid-fade
+  const [shown, setShown] = useState(prompt)
+  useEffect(() => {
+    if (prompt) setShown(prompt)
+  }, [prompt])
+  const [key, label] = (shown ?? '').includes('|') ? (shown ?? '').split('|') : ['', shown ?? '']
+
   return (
     <div
       aria-live="polite"
@@ -10,21 +21,40 @@ export function Prompt() {
         position: 'fixed',
         left: 0,
         right: 0,
-        bottom: '16%',
-        textAlign: 'center',
+        bottom: '15%',
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        gap: 10,
         pointerEvents: 'none',
         zIndex: 5,
-        color: 'rgba(230, 240, 235, 0.85)',
+        color: 'rgba(230, 240, 235, 0.72)',
         fontFamily: 'var(--font-ui)',
-        fontSize: 13,
-        letterSpacing: '0.3em',
-        textTransform: 'uppercase',
+        fontSize: 12,
+        letterSpacing: '0.12em',
         textShadow: '0 0 12px rgba(0,0,0,0.9)',
         opacity: prompt ? 1 : 0,
-        transition: 'opacity 0.5s ease',
+        transition: 'opacity 0.6s ease',
       }}
     >
-      {prompt ?? ''}
+      {key && (
+        <kbd
+          style={{
+            fontFamily: 'var(--font-ui)',
+            fontSize: 11,
+            minWidth: 22,
+            padding: '3px 6px',
+            textAlign: 'center',
+            border: '1px solid rgba(230, 240, 235, 0.45)',
+            borderRadius: 4,
+            color: 'rgba(240, 245, 242, 0.9)',
+            background: 'rgba(0, 0, 0, 0.35)',
+          }}
+        >
+          {key}
+        </kbd>
+      )}
+      <span>{label}</span>
     </div>
   )
 }

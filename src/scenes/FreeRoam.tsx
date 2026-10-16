@@ -31,6 +31,13 @@ export const cameraShake = { amount: 0 }
  * `heading`; standing up moves you to standX/standZ (the aisle).
  */
 export const seat = { active: false, x: 0, z: 0, eye: 1.1, heading: 0, standX: 0, standZ: 0, changed: false }
+
+/**
+ * A short scripted walk (e.g. stepping off the train): while `active` you're
+ * carried to x/z at `speed` m/s (walls and bounds ignored), turning to face
+ * `face` (radians) if it's set. Clears itself on arrival.
+ */
+export const autoWalk = { active: false, x: 0, z: 0, speed: 1.6, face: null as number | null }
 const STRAFE_KEYS = ['KeyA', 'KeyD', 'ArrowLeft', 'ArrowRight']
 
 /**
@@ -74,6 +81,8 @@ export function FreeRoam({ area, collide, start, startHeading }: { area: Area; c
       window.removeEventListener('keyup', ku)
       setFootsteps(0)
       setHeartbeat(false)
+      autoWalk.active = false
+      autoWalk.face = null
     }
   }, [])
 
@@ -148,8 +157,26 @@ export function FreeRoam({ area, collide, start, startHeading }: { area: Area; c
     }
     yaw.current = body.current + head.current
 
+    // Scripted walk: carried along, turning to face where the scene wants
+    if (autoWalk.face !== null) {
+      const diff = Math.atan2(Math.sin(autoWalk.face - body.current), Math.cos(autoWalk.face - body.current))
+      body.current += diff * (1 - Math.exp(-4 * dt))
+      head.current = MathUtils.damp(head.current, 0, 4, dt)
+      pitch.current = MathUtils.damp(pitch.current, 0, 4, dt)
+      yaw.current = body.current + head.current
+    }
     let advanced = false
-    if (moving) {
+    if (autoWalk.active) {
+      const dx = autoWalk.x - pos.x
+      const dz = autoWalk.z - pos.z
+      const d = Math.hypot(dx, dz)
+      const step = Math.min(d, autoWalk.speed * dt)
+      if (d > 0.02) {
+        pos.x += (dx / d) * step
+        pos.z += (dz / d) * step
+        advanced = true
+      } else autoWalk.active = false
+    } else if (moving) {
       const speed =
         (fwd < 0 && side === 0 ? WALK.backSpeed : WALK.speed) *
         (running && !panic ? RUN.speedMultiplier : 1) *

@@ -61,8 +61,8 @@ export const SEATS = {
   sitInward: 0.12, // sit a little in from the wall
   eyeAboveSeat: 0.78, // eye height above the cushion
   standFromCentre: 0.3, // stand up into the aisle
-  sitPrompt: 'Press C to sit',
-  standPrompt: 'Press C to stand',
+  sitPrompt: 'C|sit',
+  standPrompt: 'C|stand',
 }
 
 /**
@@ -98,22 +98,22 @@ export const TUNNEL = {
 
 /** Lines and captions for the ride. */
 export const RIDE_TEXT = {
-  boarded: "Okay. I'm on. Just get home.",
-  seenHim: 'No. He got on.',
+  boarded: 'Okay. I’m on.',
+  seenHim: 'He got on.',
   pa: {
     text: '"We are being held due to a passenger emergency alarm activation at the next station. We apologise for the delay."',
     sub: 'Announcement',
   },
-  dontLook: "Don't look at him. Don't look at him.",
-  moving: 'Move. Please move.',
+  dontLook: 'Don’t look at him.',
+  moving: 'Please move.',
   arriving: (name: string, last: boolean) => ({
     text: last ? `"Now arriving at ${name}. This is your stop."` : `"Now arriving at ${name}. Doors will open on the right."`,
     sub: 'Announcement',
   }),
-  choice: { text: 'Should I get off?', sub: 'Walk out the door to get off  ·  or stay on' },
-  choiceThoughts: ["Should I get off? He'd just follow me.", 'Two more stops. I can do two more stops.'],
-  stayed: ['The doors closed. He’s in my carriage now.', 'One more stop.'],
-  lastStop: { text: 'Your stop', sub: 'Walk out the door' },
+  choice: { text: 'Get off here, or stay on', sub: 'Walk through the doors to get off' },
+  choiceThoughts: ['If I get off, he gets off.', 'Two more stops.'],
+  stayed: ['He’s in my carriage.', 'One more stop.'],
+  lastStop: { text: 'Get off', sub: 'Walk through the doors' },
   doorsLabel: 'Doors close in',
 }
 
@@ -121,10 +121,13 @@ export const RIDE_TEXT = {
 export const STATIONS = {
   names: ['KINGSWAY', 'ASHDALE', 'ELM PARK'],
   doorsOpenFor: 9, // seconds to decide (stations 1 and 2)
-  /** Getting off: walk out past this x (through an open door) onto the platform. */
-  exitX: -71.55,
-  /** Doorway reach: while the doors are open you can step out this far (x). */
-  openMaxX: -69.6,
+  /** Getting off: walk up to an open door (this close to its middle, along the carriage, and this far over toward it)... */
+  doorReach: 0.75,
+  doorSideX: -72.7,
+  /** ...and you're carried out to here on the platform (x). */
+  stepOutX: -69.6,
+  /** While the doors are open you can walk this far into a doorway (x). */
+  doorwayX: -71.95,
   /** Station model placement (three.js) and the extras we add to it. */
   model: {
     edgeX: -71.75, // its platform edge, just past the train doors (-71.86)
@@ -144,21 +147,24 @@ export const RIDE_RITUALS = {
   offerAfter: 5, // seconds into a stretch (once he's around) before the ritual is offered
   ignoreAfter: 16, // offered but not done: the moment passes
   text: {
-    caption: { text: 'Text someone where you are', sub: 'Press E' },
+    nudge: 'I should tell someone where I am.',
+    prompt: 'E|text Jess',
     message: 'on the last train, 2nd car. text me back pls',
     perLetter: 0.07,
     hold: 2.5, // after "Not Delivered"
-    thought: 'No signal down here.',
-    deliveredThought: 'It went through. Someone knows where I am.',
+    thought: 'No signal.',
+    deliveredThought: 'It sent.',
   },
   call: {
-    caption: { text: 'Pretend you’re on the phone', sub: 'Press E' },
+    nudge: 'If he thinks someone’s waiting for me…',
+    prompt: 'E|fake a call',
     lines: ['Hi! Yeah, I’m on the train.', 'No, I’m almost there. You can see me from the window, right?', 'Okay. Stay on the line.'],
     perLine: 2.8,
-    thought: 'There was never anyone on the line.',
+    thought: '', // the call screen says it: Call Failed
   },
   keys: {
-    caption: { text: 'Get your keys out', sub: 'Press E' },
-    thought: 'Keys between my fingers. Like I was taught.',
+    nudge: 'Keys.',
+    prompt: 'E|keys between your fingers',
+    thought: 'Like Mom taught me.',
   },
 }

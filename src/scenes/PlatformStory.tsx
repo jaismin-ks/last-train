@@ -54,6 +54,8 @@ export function PlatformStory() {
     lastMove: -Infinity,
     appearTube: -1,
     appearedAt: -1,
+    lurkPicked: 0, // when he last chose a hiding spot
+    lurkLastZ: 0, // where you were then (which way you're heading)
     lastMe: null as Vector3 | null, // where you were last frame
     strikes: 0, // times you've frozen up close (third time, he reaches you)
     closed: 0, // metres YOU have walked toward him (he answers every APPROACH.approachStep)
@@ -110,8 +112,9 @@ export function PlatformStory() {
       game0.setCheckpoint('platform') // Try again from here starts on the platform
       s.started = true
       s.since = now
-      // he's already here, waiting in the dark with his eyes shut
-      fig.position.set(S.lurkAt.x, FLOOR_Y, S.lurkAt.z)
+      // he's already here, waiting in the dark with his eyes shut (the far dark stretch to begin with)
+      const first = S.lurkSpots[3]
+      fig.position.set(first.x, FLOOR_Y, first.z)
       fig.userData.eyesOpen = false
       fig.visible = true
     }
@@ -219,6 +222,33 @@ export function PlatformStory() {
           go('presence', now)
           break
         }
+        // While you explore, he slips (unseen) into a dark spot ahead of where you're heading
+        if (fig && now - s.lurkPicked > S.lurkRepick) {
+          s.lurkPicked = now
+          const moved = me.z - s.lurkLastZ
+          s.lurkLastZ = me.z
+          camera.getWorldDirection(tmp.look)
+          const heading = Math.abs(moved) > 0.3 ? Math.sign(moved) : Math.sign(tmp.look.z) || 1
+          tmp.chest.set(fig.position.x, FLOOR_Y + 1.3, fig.position.z)
+          const hiddenNow = !tmp.frustum.containsPoint(tmp.chest)
+          if (hiddenNow) {
+            let best: { x: number; z: number } | null = null
+            let bestScore = Infinity
+            for (const spot of S.lurkSpots) {
+              const d = Math.hypot(spot.x - me.x, spot.z - me.z)
+              if (d < S.lurkRange.min || d > S.lurkRange.max) continue
+              if ((spot.z - me.z) * heading < 0) continue // only ahead of you
+              tmp.chest.set(spot.x, FLOOR_Y + 1.3, spot.z)
+              if (tmp.frustum.containsPoint(tmp.chest)) continue // never pop into view
+              const score = Math.abs(d - S.lurkRange.ideal)
+              if (score < bestScore) {
+                bestScore = score
+                best = spot
+              }
+            }
+            if (best) fig.position.set(best.x, FLOOR_Y, best.z)
+          }
+        }
         // Never found him: he comes to you, under a light you're looking at
         if (t > S.lurkTime || s.skip) {
           const { min, max, ideal } = S.appearDistance
@@ -265,6 +295,7 @@ export function PlatformStory() {
           game.setThought(TEXT.firstSeen)
         }
         if ((s.seenAt >= 0 && now - s.seenAt > S.ritualDelay) || now - s.appearedAt > S.ritualLatest || s.skip) {
+          game.setThought(TEXT.cameraNudge)
           game.setCaption(TEXT.camera)
           go('camera', now)
         }
@@ -293,6 +324,7 @@ export function PlatformStory() {
       case 'cameraAfter':
         if (t > 1.2 && t - dt <= 1.2) game.setThought(TEXT.cameraDead)
         if (t > S.cameraAfter) {
+          game.setThought(TEXT.lightNudge)
           game.setCaption(TEXT.ritual)
           go('light', now)
         }

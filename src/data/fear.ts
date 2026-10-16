@@ -26,7 +26,7 @@ export const FEAR = {
    */
   panicDistance: 4,
   strikes: 3,
-  lastLines: ["Move. Move. Why can't I move?", 'Not again. Please.', 'No—'],
+  lastLines: ['My legs won’t move.', 'Not again.', '…'],
 
   // Effects at full fear
   fovDrop: 16, // degrees narrower view

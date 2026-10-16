@@ -139,7 +139,7 @@ function glowTexture() {
  */
 /**
  * Movement the story asks for: he walks to (x, z) at `speed` m/s. With
- * `freezeWhenSeen`, he stops dead (mid-step) whenever you're looking at him
+ * `freezeWhenSeen` (creeping), he stops and stands as soon as you look at him
  * (the story sets userData.seen every frame).
  */
 export type FigureWalk = { x: number; z: number; speed: number; freezeWhenSeen: boolean }
@@ -244,13 +244,12 @@ export const Figure = forwardRef<Group>(function Figure(_, ref) {
     const root = model.parent
     const walk = root?.userData.walk as FigureWalk | null | undefined
     let stepping = false
-    let frozenMidStep = false
     if (root && walk) {
       const dx = walk.x - root.position.x
       const dz = walk.z - root.position.z
       const d = Math.hypot(dx, dz)
-      if (d < 0.03) root.userData.walk = null
-      else if (walk.freezeWhenSeen && root.userData.seen) frozenMidStep = true
+      // caught creeping: he stops where he is and stands (easing out of the walk, never a frozen pose)
+      if (d < 0.03 || (walk.freezeWhenSeen && root.userData.seen)) root.userData.walk = null
       else {
         const step = Math.min(d, walk.speed * Math.min(dt, 0.1))
         root.position.x += (dx / d) * step
@@ -263,16 +262,15 @@ export const Figure = forwardRef<Group>(function Figure(_, ref) {
       }
     }
     root && (root.userData.stepping = stepping)
-    root && (root.userData.frozenMidStep = frozenMidStep)
 
-    // Walk while moving; caught mid-creep he freezes mid-step; otherwise he stands
+    // Walk while moving, stand otherwise (blending smoothly between the two)
     const a = anim.current
     if (a) {
-      const target = stepping || frozenMidStep ? 1 : 0
-      a.walkWeight += (target - a.walkWeight) * Math.min(1, dt * 6)
+      const target = stepping ? 1 : 0
+      a.walkWeight += (target - a.walkWeight) * Math.min(1, dt * 5)
       a.walk.setEffectiveWeight(a.walkWeight)
       a.idle.setEffectiveWeight(1 - a.walkWeight)
-      a.walk.timeScale = frozenMidStep ? 0 : (walk?.speed ?? WALK_CLIP_SPEED) / WALK_CLIP_SPEED
+      if (walk) a.walk.timeScale = walk.speed / WALK_CLIP_SPEED
       a.mixer.update(Math.min(dt, 0.1))
     }
     for (const m of mats.haze) m.uniforms.time.value = t * FIGURE_LOOK.hazeDrift

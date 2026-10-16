@@ -20,6 +20,7 @@ export function RitualOverlay() {
             <span className={s.noService}>No Service</span>
             <span className={s.battery}>3%</span>
           </div>
+          <div className={s.putAway}>E · put away</div>
           {phone.kind === 'text' ? (
             <div className={s.chat}>
               <div className={s.to}>To: Jess</div>
