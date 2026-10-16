@@ -16,6 +16,7 @@ import { disposeTree } from '../systems/dispose'
 import { PlatformLights } from './PlatformLights'
 import { PlatformStory } from './PlatformStory'
 import { CCTV } from './CCTV'
+import { SignalLamp } from './SignalLamp'
 import { Countdown } from './Countdown'
 import { StreetEffects } from './StreetEffects'
 
@@ -52,9 +53,11 @@ export function Station() {
   const setBlackout = useGame((s) => s.setBlackout)
   const start = useRef<number | null>(null)
   const faded = useRef(false)
-  // Dev only: ?phase=platform&skip=1 starts on the platform, skipping the walk down
+  // Start on the platform: dev ?phase=platform&skip=1, or Try again after he reached you
   const [free, setFree] = useState<{ heading: number; at: Vector3 } | null>(() => {
-    if (!import.meta.env.DEV || !new URLSearchParams(location.search).has('skip')) return null
+    // also after Try again on the platform (he reached you): start back on the platform
+    const devSkip = import.meta.env.DEV && new URLSearchParams(location.search).has('skip')
+    if (!devSkip && useGame.getState().checkpoint !== 'platform') return null
     const [x, y, z] = FULL_ROUTE[PLATFORM_START]
     return { heading: 0, at: new Vector3(x, y, z) }
   })
@@ -169,6 +172,7 @@ export function Station() {
       {!free && <EscalatorLights />}
       <PlatformLights />
       <CCTV />
+      <SignalLamp scene={scene} />
       {/* Hidden until the story brings it in */}
       <Train />
       {free && <PlatformStory />}

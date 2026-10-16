@@ -21,6 +21,8 @@ export const PLATFORM_TUBES = {
   distance: 9, // short reach: pools of light with dark gaps between
   flicker: [3], // the one tube that flickers
   dead: [1, 5], // tubes that are out (dark stretches)
+  /** Dim wash on the tunnel wall across the tracks (~10 m away; the tubes don't reach it). */
+  farWall: { x: -77.4, y: -7.6, every: 16, intensity: 3.5, distance: 6, color: '#5fae84' },
   /** Each tube hangs from the ceiling in a metal housing on two rods. */
   fixture: { ceilingY: -4.05, rodSpacing: 1.0, color: '#2c312e' },
   /** The brightest tube: whiter, stronger, reaches further. */
@@ -76,6 +78,16 @@ export function PlatformLights() {
 
   return (
     <>
+      {Array.from({ length: Math.floor((T.to - T.from) / T.farWall.every) + 1 }, (_, k) => (
+        <pointLight
+          key={`wall-${k}`}
+          position={[T.farWall.x, T.farWall.y, T.from + 4 + k * T.farWall.every]}
+          color={T.farWall.color}
+          intensity={on ? T.farWall.intensity : 0}
+          distance={T.farWall.distance}
+          decay={2}
+        />
+      ))}
       {tubes.map((z, i) => {
         const bright = i === T.bright.index
         return (

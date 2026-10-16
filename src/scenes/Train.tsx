@@ -1,7 +1,21 @@
 import { useEffect, useMemo, useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
 import { useGLTF } from '@react-three/drei'
-import { Box3, Color, DoubleSide, MathUtils, Vector3, type Group, type Mesh, type MeshStandardMaterial, type Object3D, type PointLight } from 'three'
+import {
+  AdditiveBlending,
+  Box3,
+  CanvasTexture,
+  Color,
+  DoubleSide,
+  MathUtils,
+  Object3D,
+  SpriteMaterial,
+  Vector3,
+  type Group,
+  type Mesh,
+  type MeshStandardMaterial,
+  type PointLight,
+} from 'three'
 import { DRACO } from '../data/street'
 import markers from '../data/train-markers.json'
 import { useGame } from '../store'
@@ -48,11 +62,29 @@ export function Train() {
   const lights = useRef<(PointLight | null)[]>([])
   const arrivedAt = useRef<number | null>(null)
   const startedAt = useRef<number | null>(null)
-  // Front of the train (far end of the platform), for the headlight
-  const front = useMemo(() => {
+  // Front of the train: it pulls in heading toward the gate (-z), so the leading
+  // end is the -z end. Headlights there, aimed down the tunnel ahead.
+  const head = useMemo(() => {
     const box = new Box3().setFromObject(scene)
-    return new Vector3(markers.cars[0][0], box.min.y + 1.6, box.max.z + 0.3)
+    const z = box.min.z
+    const y = markers.cars[0][1] + TRAIN_ARRIVAL.headlight.height
+    const x = markers.cars[0][0]
+    const target = new Object3D()
+    target.position.set(x, y - 1.2, z - 30) // ahead and a little down: track, walls, platform edge
+    return { pos: new Vector3(x, y, z - 0.25), lampZ: z - 0.03, x, y, target }
   }, [scene])
+  const lampGlow = useMemo(() => {
+    const c = document.createElement('canvas')
+    c.width = c.height = 64
+    const g = c.getContext('2d')!
+    const grad = g.createRadialGradient(32, 32, 0, 32, 32, 32)
+    grad.addColorStop(0, 'rgba(255,255,255,1)')
+    grad.addColorStop(0.15, 'rgba(255,255,255,0.7)')
+    grad.addColorStop(1, 'rgba(255,255,255,0)')
+    g.fillStyle = grad
+    g.fillRect(0, 0, 64, 64)
+    return new SpriteMaterial({ map: new CanvasTexture(c), color: TRAIN_ARRIVAL.headlight.color, blending: AdditiveBlending, depthWrite: false, toneMapped: false })
+  }, [])
 
   // The model only has one door per carriage on the far side; the other openings
   // were empty (looked like open doors while moving). Fill them with mirrored
@@ -202,14 +234,36 @@ export function Train() {
   return (
     <group ref={group} visible={false}>
       <primitive object={scene} />
-      {trainState === 'arriving' && (
-        <pointLight
-          position={front.toArray()}
-          color={TRAIN_ARRIVAL.headlight.color}
-          intensity={TRAIN_ARRIVAL.headlight.intensity}
-          distance={TRAIN_ARRIVAL.headlight.distance}
-          decay={2}
-        />
+      {(trainState === 'arriving' || trainState === 'stopped') && (
+        <>
+          {/* headlights: a strong beam down the tunnel, plus spill onto the walls nearby */}
+          <primitive object={head.target} />
+          <spotLight
+            position={head.pos.toArray()}
+            target={head.target}
+            color={TRAIN_ARRIVAL.headlight.color}
+            intensity={TRAIN_ARRIVAL.headlight.intensity}
+            distance={TRAIN_ARRIVAL.headlight.distance}
+            angle={0.75}
+            penumbra={0.7}
+            decay={1.4}
+          />
+          <pointLight
+            position={[head.x, head.y, head.lampZ - 1.5]}
+            color={TRAIN_ARRIVAL.headlight.color}
+            intensity={TRAIN_ARRIVAL.headlight.spill}
+            distance={9}
+            decay={2}
+          />
+          {[-1, 1].map((side) => (
+            <sprite
+              key={side}
+              material={lampGlow}
+              scale={TRAIN_ARRIVAL.headlight.glare}
+              position={[head.x + side * TRAIN_ARRIVAL.headlight.spread, head.y, head.lampZ]}
+            />
+          ))}
+        </>
       )}
       {/* one light per carriage keeps the game light; markers.lights has 5 per car if needed */}
       {(markers.cars as [number, number, number][]).map((c) => [c[0], c[1] + 2.25, c[2]] as [number, number, number]).map((p, i) => (

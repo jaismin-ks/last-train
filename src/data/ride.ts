@@ -36,9 +36,7 @@ export const RIDE = {
   /** He starts at the far end of your carriage and steps this much closer each flicker. */
   heldStartGap: 15,
   heldStep: 3,
-  heldClosest: 2.2,
-  /** Walk at him and he vanishes to the far end of the carriage this close (metres). */
-  vanishDistance: 1.9,
+  heldClosest: 3.4, // never closer than this on his own
   /** After he's as close as he gets, seconds before the train moves again. */
   resumeAfter: 6,
 
@@ -47,20 +45,35 @@ export const RIDE = {
   arriveTime: 6, // seconds to slow to a stop
 }
 
+/** Sitting down (C): seats along both walls of the carriage. */
+export const SEATS = {
+  fromCentre: 1.05, // seat cushions run this far from the middle of the carriage (metres)
+  spacing: 0.6, // one sitting spot per this much cushion
+  reach: 1.1, // how close you need to be to sit
+  sitInward: 0.12, // sit a little in from the wall
+  eyeAboveSeat: 0.78, // eye height above the cushion
+  standFromCentre: 0.3, // stand up into the aisle
+  sitPrompt: 'Press C to sit',
+  standPrompt: 'Press C to stand',
+}
+
 /**
  * Emergency while held in the tunnel: the carriage lights stay on but dim,
- * and a red beacon on the ceiling spins like a siren.
+ * and a red beacon above the end door spins like a siren.
  */
 export const SIREN = {
-  position: [-73.25, -7.72, 57] as [number, number, number], // on the ceiling (-7.65), middle of your carriage
-  color: '#ff2414',
-  turnsPerSecond: 0.9,
-  sweep: 0.9, // how far the spinning beam swings out (metres)
-  intensity: 9,
-  distance: 8,
+  position: [-72.8, -7.65, 57.5] as [number, number, number], // on the roof, beside the handrail, middle of your carriage
+  color: '#ff1e10',
+  turnsPerSecond: 0.35, // slow, heavy turn
+  intensity: 22, // each of the two beams
+  distance: 12,
+  beamAngle: 0.6, // wide beams (radians), so they wash rather than spot
+  beamSoftness: 0.95, // very soft edge: no hard circles on the walls
+  beamDrop: 1.6, // beams aim a little down as they sweep (metres over 4 m)
   glow: 2.5,
-  carriageLight: 0.3, // carriage lights dim to this (0–1)
-  warmth: 0.15, // slight warm tint on the dimmed lights (0 = white)
+  carriageLight: 0.07, // carriage lights almost out during the emergency (0–1)
+  ambient: 0.2, // general fill light during the emergency (1 = normal)
+  warmth: 0.1, // slight warm tint on the dimmed lights (0 = white)
 }
 
 /** How fast the tunnel streams past at full speed (metres per second), and the lamps along it. */
@@ -71,7 +84,7 @@ export const TUNNEL = {
   lampY: -8.4,
   sides: [-76.4, -70.1] as [number, number], // x of the tunnel walls either side
   lampColor: '#ffd9a0',
-  wallColor: '#0b0d0c',
+  wallColor: '#020303', // black: only the passing lamps show outside
   shake: 0.006, // camera rumble at full speed
 }
 

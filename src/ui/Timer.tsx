@@ -31,11 +31,12 @@ export function Missed() {
   const missed = useGame((st) => st.missed)
   const retry = useGame((st) => st.retry)
   const line = useGame((st) => st.missedLine)
+  const heading = useGame((st) => st.missedHeading)
   if (!missed) return null
   return (
-    <div role="dialog" aria-modal aria-label="You missed the last train" className={s.missed}>
+    <div role="dialog" aria-modal aria-label={heading} className={s.missed}>
       <div className={s.panel}>
-        <h2 className={s.heading}>You missed the last train.</h2>
+        <h2 className={s.heading}>{heading}</h2>
         {line && <p className={s.warn}>{line}</p>}
         <div className={s.actions}>
           <button className={s.button} onClick={retry} autoFocus>

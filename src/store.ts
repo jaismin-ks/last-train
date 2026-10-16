@@ -34,7 +34,10 @@ type GameState = {
   countdown: number | null // seconds left to catch the train (null = no timer running)
   countdownLabel: string // what the countdown is to ("Station closes in")
   missedLine: string // what happened, on the missed screen
-  missed: boolean // the countdown ran out
+  missedHeading: string // headline on the missed screen
+  missed: boolean // the section failed (countdown ran out, or he reached you)
+  panic: boolean // frozen in fear: you can't move or look
+  checkpoint: 'platform' | null // Try again on the platform starts you on the platform
   attempt: number // bumps on Try again, restarting the current section
   muted: boolean // sound off (M or the speaker button), remembered between visits
   volume: number // 0–1 master volume
@@ -57,6 +60,9 @@ type GameState = {
   setCountdown: (seconds: number | null) => void
   startCountdown: (seconds: number, label: string, missedLine: string) => void
   setMissed: (missed: boolean) => void
+  fail: (heading: string, line: string) => void
+  setPanic: (panic: boolean) => void
+  setCheckpoint: (checkpoint: 'platform' | null) => void
   retry: () => void
   setMuted: (muted: boolean) => void
   setVolume: (volume: number) => void
@@ -118,7 +124,10 @@ export const useGame = create<GameState>((set, get) => {
   countdown: null,
   countdownLabel: '',
   missedLine: '',
+  missedHeading: 'You missed the last train.',
   missed: false,
+  panic: false,
+  checkpoint: null,
   attempt: 0,
   ...settings,
   setPhase: (phase) => set({ phase }),
@@ -137,8 +146,12 @@ export const useGame = create<GameState>((set, get) => {
   setInputLocked: (inputLocked) => set({ inputLocked }),
   setFear: (fear) => set({ fear }),
   setCountdown: (countdown) => set({ countdown }),
-  startCountdown: (countdown, countdownLabel, missedLine) => set({ countdown, countdownLabel, missedLine }),
+  startCountdown: (countdown, countdownLabel, missedLine) =>
+    set({ countdown, countdownLabel, missedLine, missedHeading: 'You missed the last train.' }),
   setMissed: (missed) => set({ missed }),
+  fail: (missedHeading, missedLine) => set({ missed: true, missedHeading, missedLine, inputLocked: true, countdown: null }),
+  setPanic: (panic) => set({ panic }),
+  setCheckpoint: (checkpoint) => set({ checkpoint }),
   retry: () =>
     set((s) => ({
       attempt: s.attempt + 1,
@@ -148,6 +161,8 @@ export const useGame = create<GameState>((set, get) => {
       stamina: 1,
       running: false,
       fear: false,
+      stress: 0,
+      panic: false,
       thought: null,
       caption: null,
       prompt: null,

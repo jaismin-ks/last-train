@@ -1,10 +1,12 @@
 import { useEffect, useMemo, useRef } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
-import { MathUtils, Raycaster, Vector3, type Object3D } from 'three'
+import { MathUtils, Raycaster, Vector3, type Object3D, type PerspectiveCamera } from 'three'
 import { EYE_ABOVE_FLOOR, RUN, WALK } from '../data/street'
 import { usePlayerInput } from '../systems/usePlayerInput'
 import { setFootsteps, setHeartbeat } from '../audio/sounds'
 import { useGame } from '../store'
+import { FEAR } from '../data/fear'
+import { fearFocus } from '../systems/fear'
 
 /** Free walking area: the platform (three.js coords). */
 export type Area = { minX: number; maxX: number; minZ: number; maxZ: number; floorY: number }
@@ -22,6 +24,13 @@ const LOOK = {
 const WALL_GAP = 0.45 // metres kept between you and walls
 /** Camera rumble the scene can set (metres of random jitter), e.g. a moving train. */
 export const cameraShake = { amount: 0 }
+
+/**
+ * Sitting down (the scene sets this; FreeRoam follows it). While `active` you
+ * stay put at x/z with your eyes at `eye` metres above the floor, facing
+ * `heading`; standing up moves you to standX/standZ (the aisle).
+ */
+export const seat = { active: false, x: 0, z: 0, eye: 1.1, heading: 0, standX: 0, standZ: 0, changed: false }
 const STRAFE_KEYS = ['KeyA', 'KeyD', 'ArrowLeft', 'ArrowRight']
 
 /**
@@ -44,6 +53,8 @@ export function FreeRoam({ area, collide, start, startHeading }: { area: Area; c
   const exhausted = useRef(false)
   const sinceRun = useRef(0)
   const bob = useRef(0)
+  const eye = useRef(EYE_ABOVE_FLOOR) // eye height above the floor (lower when sitting)
+  const baseFov = useRef(60) // view width when calm (degrees)
   const ray = useMemo(() => new Raycaster(), [])
   const tmp = useMemo(() => ({ move: new Vector3(), from: new Vector3(), look: new Vector3() }), [])
 
@@ -80,7 +91,26 @@ export function FreeRoam({ area, collide, start, startHeading }: { area: Area; c
     const fwd = (i.forward ? 1 : 0) - (i.back ? 1 : 0)
     const side = (strafe.current.right ? 1 : 0) - (strafe.current.left ? 1 : 0)
     const locked = useGame.getState().inputLocked
-    const moving = !locked && (fwd !== 0 || side !== 0)
+    // Sat down / stood up since last frame
+    if (seat.changed) {
+      seat.changed = false
+      if (seat.active) {
+        pos.set(seat.x, area.floorY, seat.z)
+        body.current = seat.heading
+        head.current = 0
+      } else pos.set(seat.standX, area.floorY, seat.standZ)
+    }
+    eye.current = MathUtils.damp(eye.current, seat.active ? seat.eye : EYE_ABOVE_FLOOR, 5, dt)
+    const { stress, panic } = useGame.getState()
+    const frozen = locked || panic // panic: you can barely move or look away
+    const moving = !locked && !seat.active && (fwd !== 0 || side !== 0)
+
+    // Fear narrows your view
+    const fov = baseFov.current - FEAR.fovDrop * stress
+    if (Math.abs((camera as PerspectiveCamera).fov - fov) > 0.05) {
+      ;(camera as PerspectiveCamera).fov = fov
+      camera.updateProjectionMatrix()
+    }
 
     // Running: same energy rules as on the route
     if (exhausted.current && stamina.current >= RUN.minToStart) exhausted.current = false
@@ -96,8 +126,18 @@ export function FreeRoam({ area, collide, start, startHeading }: { area: Area; c
     setStamina(stamina.current, running)
     setHeartbeat(running || useGame.getState().fear)
 
+    // In a panic you can't look away: your gaze is dragged to him
+    if (panic && fearFocus.active) {
+      const want = Math.atan2(fearFocus.x - pos.x, fearFocus.z - pos.z)
+      const diff = Math.atan2(Math.sin(want - body.current), Math.cos(want - body.current))
+      body.current += diff * (1 - Math.exp(-FEAR.panicStare * dt))
+      head.current = MathUtils.damp(head.current, 0, FEAR.panicStare, dt)
+      const flat = Math.hypot(fearFocus.x - pos.x, fearFocus.z - pos.z)
+      const wantPitch = Math.atan2(fearFocus.y - (area.floorY + eye.current), Math.max(flat, 0.1))
+      pitch.current = MathUtils.damp(pitch.current, wantPitch, FEAR.panicStare, dt)
+    }
     // Head turns toward the cursor; near the left/right edge the body keeps turning
-    if (!locked) {
+    if (!frozen) {
       const x = i.lookX
       const edge = MathUtils.smoothstep(Math.abs(x), LOOK.edgeStart, 1) * Math.sign(x)
       body.current -= edge * LOOK.turnSpeed * dt
@@ -110,7 +150,10 @@ export function FreeRoam({ area, collide, start, startHeading }: { area: Area; c
 
     let advanced = false
     if (moving) {
-      const speed = (fwd < 0 && side === 0 ? WALK.backSpeed : WALK.speed) * (running ? RUN.speedMultiplier : 1)
+      const speed =
+        (fwd < 0 && side === 0 ? WALK.backSpeed : WALK.speed) *
+        (running && !panic ? RUN.speedMultiplier : 1) *
+        (panic ? FEAR.panicCrawl : 1 - FEAR.slowDown * stress)
       // forward = where you're looking (flattened), right = perpendicular
       const fx = Math.sin(yaw.current), fz = Math.cos(yaw.current)
       tmp.move.set(fx * fwd - fz * side, 0, fz * fwd + fx * side).normalize()
@@ -132,9 +175,10 @@ export function FreeRoam({ area, collide, start, startHeading }: { area: Area; c
     if (advanced) bob.current += dt * WALK.bobSpeed * (running ? 1.6 : 1)
     const bobY = advanced ? Math.sin(bob.current) * WALK.bobAmount * (useGame.getState().reduceMotion ? 0 : 1) : 0
 
-    camera.position.set(pos.x, area.floorY + EYE_ABOVE_FLOOR + bobY, pos.z)
-    if (cameraShake.amount > 0) {
-      const a = cameraShake.amount * (useGame.getState().reduceMotion ? 0.2 : 1)
+    camera.position.set(pos.x, area.floorY + eye.current + bobY, pos.z)
+    const shake = cameraShake.amount + (panic ? FEAR.panicTremble : 0) // trembling in a panic
+    if (shake > 0) {
+      const a = shake * (useGame.getState().reduceMotion ? 0.2 : 1)
       camera.position.x += (Math.random() - 0.5) * a
       camera.position.y += (Math.random() - 0.5) * a
     }

@@ -1,52 +1,186 @@
 import { useEffect, useMemo, useRef } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
 import { useGLTF } from '@react-three/drei'
-import { Frustum, MathUtils, Matrix4, MeshBasicMaterial, MeshStandardMaterial, Vector3, type Group, type PointLight } from 'three'
+import {
+  Frustum,
+  MathUtils,
+  Matrix4,
+  MeshBasicMaterial,
+  MeshStandardMaterial,
+  DoubleSide,
+  Object3D,
+  Raycaster,
+  Vector3,
+  type Group,
+  type Mesh,
+  type HemisphereLight,
+  type PointLight,
+  type SpotLight,
+} from 'three'
 import { DRACO, SCENE_FADE } from '../data/street'
-import { RIDE as R, RIDE_TEXT as TEXT, SIREN, TUNNEL } from '../data/ride'
+import { RIDE as R, RIDE_TEXT as TEXT, SEATS, SIREN, TUNNEL } from '../data/ride'
 import { useGame } from '../store'
 import { playPresence, playTrainBrake, playTrainChime, playTrainDoors, setTrainRun, stopAllAudio } from '../audio/sounds'
 import { Train, TRAIN_MODEL, trainLights } from './Train'
-import { FreeRoam, cameraShake } from './FreeRoam'
-import { Figure } from './Figure'
+import { FreeRoam, cameraShake, seat } from './FreeRoam'
+import { Figure, isWalking, stopWalking, walkTo } from './Figure'
+import { addFear, fearFocus, freezeForGood, resetFear, stepFear } from '../systems/fear'
+import { APPROACH, CAUGHT, FEAR, FIGURE_WALK } from '../data/fear'
 
 type Beat = 'depart' | 'cruise' | 'brake' | 'held' | 'resume' | 'arrive' | 'doors' | 'cut'
 
 /** Middle of the carriage you're in (z), for the passing tunnel lights. */
 const CAR_Z = 57
+const CAR_X = -73.25
+/** General fill light in the carriage (dims during the emergency). */
+const FILL = 0.35
+
+type SeatSpot = { x: number; z: number; y: number; side: number }
 
 /**
- * Emergency beacon on the carriage ceiling: a red light spinning like a siren,
- * sweeping round the walls. `level` (0–1) is read every frame.
+ * Finds the seats in your carriage: samples down along both walls for the seat
+ * cushions (material "side_chair") and puts a sitting spot every SEATS.spacing.
+ */
+function findSeats(train: Object3D): SeatSpot[] {
+  const car = train.getObjectByName('LT_Car_1')
+  if (!car) return []
+  car.updateWorldMatrix(true, true)
+  const meshes: Mesh[] = []
+  car.traverse((o) => (o as Mesh).isMesh && meshes.push(o as Mesh))
+  const ray = new Raycaster()
+  const down = new Vector3(0, -1, 0)
+  const spots: SeatSpot[] = []
+  for (const side of [-1, 1]) {
+    const x = CAR_X + side * SEATS.fromCentre
+    let run: { z: number; y: number }[] = []
+    const flush = () => {
+      // a run of cushion: seat spots spread evenly along it
+      if (run.length) {
+        const from = run[0].z
+        const to = run[run.length - 1].z
+        const n = Math.max(1, Math.round((to - from) / SEATS.spacing))
+        for (let k = 0; k < n; k++) {
+          const z = from + ((k + 0.5) * (to - from)) / n
+          spots.push({ x, z, y: run[0].y, side })
+        }
+      }
+      run = []
+    }
+    for (let z = R.area.minZ - 0.3; z <= R.area.maxZ + 0.3; z += 0.1) {
+      ray.set(new Vector3(x, R.area.floorY + 1.2, z), down)
+      ray.far = 2
+      const hit = ray.intersectObjects(meshes, false)[0]
+      const isSeat = hit && ((hit.object as Mesh).material as { name?: string }).name === 'side_chair'
+      if (isSeat) run.push({ z, y: hit.point.y })
+      else flush()
+    }
+    flush()
+  }
+  return spots
+}
+
+/**
+ * Emergency beacon on the carriage roof (beside the handrail): a red dome with
+ * a bright lamp spinning inside, throwing two tight red beams that sweep round
+ * the carriage like a siren. `level` (0–1) is read every frame.
  */
 function Siren({ level }: { level: { current: number } }) {
-  const beam = useRef<PointLight>(null)
+  const spinner = useRef<Group>(null)
+  const beams = useRef<(SpotLight | null)[]>([])
   const glow = useRef<PointLight>(null)
-  const lens = useMemo(() => new MeshBasicMaterial({ color: SIREN.color, toneMapped: false }), [])
-  const base = useMemo(() => new MeshStandardMaterial({ color: '#222', roughness: 0.6 }), [])
+  const targets = useMemo(() => [new Object3D(), new Object3D()], [])
+  const mats = useMemo(
+    () => ({
+      base: new MeshStandardMaterial({ color: '#141515', roughness: 0.55, metalness: 0.5 }),
+      // ribbed red glass you can see the reflector turning through
+      lens: new MeshStandardMaterial({
+        color: '#7a0d08',
+        emissive: SIREN.color,
+        emissiveIntensity: 0.2,
+        roughness: 0.15,
+        metalness: 0.1,
+        transparent: true,
+        opacity: 0.55,
+        depthWrite: false,
+        side: DoubleSide,
+      }),
+      reflector: new MeshStandardMaterial({ color: '#ffd9cf', emissive: '#ff6a50', emissiveIntensity: 0.3, roughness: 0.15, metalness: 0.9, side: DoubleSide }),
+      bulb: new MeshBasicMaterial({ color: '#ffe2d8', toneMapped: false }),
+    }),
+    [],
+  )
+  const [x, y, z] = SIREN.position
+  const lampY = y - 0.1 // middle of the dome
   useFrame(({ clock }) => {
-    const a = clock.elapsedTime * Math.PI * 2 * SIREN.turnsPerSecond
     const on = level.current
-    if (beam.current) {
-      beam.current.position.set(Math.cos(a) * SIREN.sweep, -0.15, Math.sin(a) * SIREN.sweep)
-      beam.current.intensity = SIREN.intensity * on
-    }
-    // the lens brightens each time the beam swings toward you
-    const flash = 0.35 + 0.65 * Math.max(0, Math.sin(a))
+    const a = clock.elapsedTime * Math.PI * 2 * SIREN.turnsPerSecond
+    if (spinner.current) spinner.current.rotation.y = a
+    // two beams back to back, aimed out and a little down, going round with the lamp
+    targets.forEach((t, k) => {
+      const b = a + k * Math.PI
+      t.position.set(x + Math.cos(b) * 4, lampY - SIREN.beamDrop, z + Math.sin(b) * 4)
+      t.updateMatrixWorld()
+      const beam = beams.current[k]
+      if (beam) beam.intensity = SIREN.intensity * on
+    })
+    // the dome flares each time a beam swings past you
+    const flash = 0.3 + 0.7 * Math.abs(Math.sin(a))
     if (glow.current) glow.current.intensity = SIREN.glow * on * flash
-    lens.color.set(SIREN.color).multiplyScalar(on > 0 ? 0.3 + 0.7 * flash : 0.15)
+    mats.lens.emissiveIntensity = on > 0 ? 0.5 + 2.0 * flash * on : 0.03
+    mats.reflector.emissiveIntensity = on > 0 ? 0.3 + 1.2 * on : 0
+    mats.bulb.color.set(on > 0 ? '#ffe2d8' : '#2a1210')
   })
   return (
-    <group position={SIREN.position}>
-      <mesh material={base} position={[0, 0.04, 0]}>
-        <cylinderGeometry args={[0.09, 0.09, 0.04, 16]} />
-      </mesh>
-      <mesh material={lens} position={[0, -0.04, 0]}>
-        <sphereGeometry args={[0.075, 16, 10, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2]} />
-      </mesh>
-      <pointLight ref={beam} color={SIREN.color} intensity={0} distance={SIREN.distance} decay={2} />
-      <pointLight ref={glow} position={[0, -0.12, 0]} color={SIREN.color} intensity={0} distance={2.5} decay={2} />
-    </group>
+    <>
+      {/* hangs from the roof: mounting plate and base against the ceiling, glass lens below */}
+      <group position={SIREN.position}>
+        <mesh material={mats.base} position={[0, -0.006, 0]}>
+          <cylinderGeometry args={[0.1, 0.1, 0.012, 24]} />
+        </mesh>
+        <mesh material={mats.base} position={[0, -0.03, 0]}>
+          <cylinderGeometry args={[0.072, 0.082, 0.04, 24]} />
+        </mesh>
+        {/* inside: bulb and a curved reflector going round */}
+        <mesh material={mats.bulb} position={[0, -0.1, 0]}>
+          <sphereGeometry args={[0.014, 12, 8]} />
+        </mesh>
+        <group ref={spinner} position={[0, -0.1, 0]}>
+          <mesh material={mats.reflector} position={[-0.012, 0, 0]}>
+            <cylinderGeometry args={[0.04, 0.04, 0.07, 16, 1, true, Math.PI / 2, Math.PI]} />
+          </mesh>
+        </group>
+        {/* ribbed glass: straight sides and a rounded end */}
+        <mesh material={mats.lens} position={[0, -0.09, 0]}>
+          <cylinderGeometry args={[0.064, 0.068, 0.1, 28, 1, true]} />
+        </mesh>
+        {[0, 1, 2, 3, 4, 5, 6, 7].map((k) => (
+          <mesh key={k} material={mats.lens} position={[0, -0.09, 0]} rotation={[0, (k * Math.PI) / 4, 0]}>
+            <boxGeometry args={[0.003, 0.1, 0.126]} />
+          </mesh>
+        ))}
+        <mesh material={mats.lens} position={[0, -0.14, 0]}>
+          <sphereGeometry args={[0.064, 28, 12, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2]} />
+        </mesh>
+      </group>
+      {targets.map((t, k) => (
+        <primitive key={`t${k}`} object={t} />
+      ))}
+      {targets.map((t, k) => (
+        <spotLight
+          key={k}
+          ref={(el) => (beams.current[k] = el)}
+          position={[x, lampY, z]}
+          target={t}
+          color={SIREN.color}
+          intensity={0}
+          distance={SIREN.distance}
+          angle={SIREN.beamAngle}
+          penumbra={SIREN.beamSoftness}
+          decay={1.5}
+        />
+      ))}
+      <pointLight ref={glow} position={[x, lampY - 0.2, z]} color={SIREN.color} intensity={0} distance={3} decay={2} />
+    </>
   )
 }
 
@@ -114,6 +248,7 @@ export function Ride() {
   const figure = useRef<Group>(null)
   const speed = useRef(0) // 0 stopped → 1 full speed
   const siren = useRef(0) // emergency beacon, 0 off → 1 spinning
+  const fill = useRef<HemisphereLight>(null)
   const st = useRef({
     beat: 'depart' as Beat,
     since: -1,
@@ -122,9 +257,44 @@ export function Ride() {
     nextFlicker: 0,
     flickerUntil: 0,
     said: new Set<string>(),
+    lastMe: null as Vector3 | null,
+    strikes: 0,
+    closed: 0,
   })
   const tmp = useMemo(() => ({ frustum: new Frustum(), m: new Matrix4(), p: new Vector3() }), [])
   const start = useMemo(() => new Vector3(R.start.x, R.area.floorY, R.start.z), [])
+  const seats = useMemo(() => findSeats(train), [train])
+  const nearSeat = useRef<SeatSpot | null>(null)
+
+  // C sits down on the seat you're next to, and C again stands up
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.code !== 'KeyC' || e.repeat || useGame.getState().paused || useGame.getState().inputLocked) return
+      if (seat.active) {
+        seat.active = false
+        seat.changed = true
+        return
+      }
+      const s = nearSeat.current
+      if (!s) return
+      Object.assign(seat, {
+        active: true,
+        changed: true,
+        x: s.x - s.side * SEATS.sitInward, // a little in from the wall, over the cushion
+        z: s.z,
+        eye: s.y + SEATS.eyeAboveSeat - R.area.floorY,
+        heading: s.side < 0 ? Math.PI / 2 : -Math.PI / 2, // facing across the carriage
+        standX: CAR_X + s.side * SEATS.standFromCentre,
+        standZ: s.z,
+      })
+    }
+    window.addEventListener('keydown', onKey)
+    return () => {
+      window.removeEventListener('keydown', onKey)
+      seat.active = false
+      useGame.getState().setPrompt(null)
+    }
+  }, [])
 
   // Dev only: N skips ahead (speeds through the current beat)
   useEffect(() => {
@@ -159,14 +329,14 @@ export function Ride() {
       trainLights.level = 1
       trainLights.emergency = 0
       const s = useGame.getState()
-      s.setFear(false)
+      resetFear()
       s.setCaption(null)
       s.setInputLocked(false)
       s.setTrainState('hidden')
     }
   }, [camera])
 
-  useFrame(({ clock }) => {
+  useFrame(({ clock }, dt) => {
     const now = clock.elapsedTime
     const s = st.current
     if (s.started < 0) {
@@ -203,15 +373,42 @@ export function Ride() {
       tmp.p.set(fig.position.x, fig.position.y + 1.4, fig.position.z)
       dist = tmp.p.distanceTo(me)
       inView = tmp.frustum.containsPoint(tmp.p)
-      fig.rotation.y = Math.atan2(me.x - fig.position.x, me.z - fig.position.z)
+      // standing, he always faces you (walking, he faces where he's going)
+      if (!isWalking(fig)) {
+        const want = Math.atan2(me.x - fig.position.x, me.z - fig.position.z)
+        fig.rotation.y += Math.atan2(Math.sin(want - fig.rotation.y), Math.cos(want - fig.rotation.y)) * Math.min(1, dt * 5)
+      }
     }
 
-    // Walk right up to him and he's gone — at the far end of the carriage instead
-    if (fig?.visible && s.beat === 'held' && Math.hypot(me.x - fig.position.x, me.z - fig.position.z) < R.vanishDistance) {
-      const toMax = R.area.maxZ - me.z
-      const toMin = me.z - R.area.minZ
-      fig.position.set(-73.25, R.area.floorY, toMax > toMin ? R.area.maxZ : R.area.minZ)
+    // He's in your carriage (not behind the end door): you can be reached
+    const inYourCarriage = fig?.visible === true && fig.position.z < R.area.maxZ + 0.5 && fig.position.z > R.area.minZ - 0.5
+    const near = inYourCarriage ? Math.hypot(me.x - fig!.position.x, me.z - fig!.position.z) : Infinity
+    if (fig) fig.userData.seen = inView
+    Object.assign(fearFocus, fig?.visible ? { active: true, x: fig.position.x, y: fig.position.y + 1.68, z: fig.position.z } : { active: false })
+
+    // He reaches you: it's over. He never says a word.
+    if (near < APPROACH.contact && !game.missed && s.beat !== 'cut') {
+      game.fail(CAUGHT.heading, CAUGHT.line)
+      seat.active = false
+      return
     }
+
+    // Walk at him and he comes to you
+    if (fig && near < APPROACH.range && !game.panic) {
+      // only your own steps count (him walking toward you doesn't)
+      if (s.lastMe) {
+        tmp.p.set(fig.position.x - me.x, 0, fig.position.z - me.z).normalize()
+        s.closed += Math.max(0, (me.x - s.lastMe.x) * tmp.p.x + (me.z - s.lastMe.z) * tmp.p.z)
+      }
+      if (s.closed >= APPROACH.approachStep) {
+        s.closed = 0
+        // a step of his own, but he never closes the last stretch himself
+        const k = Math.max(APPROACH.holdOff, near - APPROACH.stepToward) / Math.max(near, 0.001)
+        walkTo(fig, me.x + (fig.position.x - me.x) * k, me.z + (fig.position.z - me.z) * k, FIGURE_WALK.toward)
+        addFear(APPROACH.fearJump)
+      }
+    } else s.closed = 0
+    s.lastMe = (s.lastMe ?? new Vector3()).copy(me)
 
     /** The carriage lights stutter; during the dark moment, `onDark` runs once. */
     const flicker = (onDark: () => void) => {
@@ -222,7 +419,8 @@ export function Ride() {
         onDark()
       }
       const dark = now < s.flickerUntil
-      trainLights.level = dark ? (Math.random() < 0.3 ? 0.4 : 0.02) : s.beat === 'held' ? SIREN.carriageLight : 1
+      // a flicker only ever goes darker: the dim emergency light cuts out entirely
+      trainLights.level = dark ? (Math.random() < 0.3 ? SIREN.carriageLight * 0.5 : 0) : s.beat === 'held' ? SIREN.carriageLight : 1
     }
 
     switch (s.beat) {
@@ -284,6 +482,7 @@ export function Ride() {
           flicker(() => {
             if (!fig) return
             // each time the lights go out, he's closer
+            stopWalking(fig) // the lights are out: he can be anywhere
             if (!s.said.has('inCar')) {
               s.said.add('inCar')
               const side = me.z < CAR_Z ? 1 : -1 // the far end from you
@@ -346,17 +545,51 @@ export function Ride() {
         break
     }
 
+    // Sit / stand prompt when you're next to a seat
+    let nearest: SeatSpot | null = null
+    let best = SEATS.reach
+    for (const seatSpot of seats) {
+      const d = Math.hypot(me.x - seatSpot.x, me.z - seatSpot.z)
+      if (d < best) {
+        best = d
+        nearest = seatSpot
+      }
+    }
+    nearSeat.current = nearest
+    const prompt = s.beat === 'cut' ? null : seat.active ? SEATS.standPrompt : nearest ? SEATS.sitPrompt : null
+    if (game.prompt !== prompt) game.setPrompt(prompt)
+    if (s.beat === 'doors' && seat.active) {
+      seat.active = false // stand up for your stop
+      seat.changed = true
+    }
+
+    // During the emergency everything else dims, so the siren's red carries the scene
+    if (fill.current) fill.current.intensity = FILL * (1 - (1 - SIREN.ambient) * siren.current)
+
     if (s.beat !== 'brake') cameraShake.amount = TUNNEL.shake * speed.current
     setTrainRun(s.beat === 'cut' ? 0 : speed.current)
-    const afraid = fig?.visible === true && dist < 9
-    if (afraid !== game.fear) game.setFear(afraid)
+    // Fear: rises with him near and in sight. In the train there's nowhere safe.
+    const fearDist = fig?.visible ? (inYourCarriage ? near : dist) : Infinity
+    if (stepFear(now, Math.min(dt, 0.1), fearDist, inView, false) === 'panic' && fig && inYourCarriage) {
+      s.strikes += 1
+      if (s.strikes >= FEAR.strikes) {
+        // third time: you can't move at all, and he walks all the way to you
+        freezeForGood()
+        walkTo(fig, me.x, me.z, FIGURE_WALK.toward)
+      } else {
+        // he walks a little closer and stops; then you can move again
+        const k = Math.max(APPROACH.holdOff, near - FEAR.panicStep) / Math.max(near, 0.001)
+        walkTo(fig, me.x + (fig.position.x - me.x) * k, me.z + (fig.position.z - me.z) * k, FIGURE_WALK.toward)
+      }
+      game.setThought(FEAR.lastLines[Math.min(s.strikes, FEAR.lastLines.length) - 1])
+    }
   })
 
   return (
     <>
       <color attach="background" args={['#000']} />
       <fog attach="fog" args={['#000000', 4, 40]} />
-      <hemisphereLight args={['#1b2420', '#050505', 0.35]} />
+      <hemisphereLight ref={fill} args={['#1b2420', '#050505', FILL]} />
       <Train />
       <Tunnel speed={speed} />
       <Siren level={siren} />

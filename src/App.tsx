@@ -6,6 +6,7 @@ import { FilmGrain } from './ui/FilmGrain'
 import { Experience } from './Experience'
 import { Resources } from './ui/Resources'
 import { AudioSettings, Hud } from './ui/Hud'
+import { DevPanel } from './ui/DevPanel'
 
 function Screen() {
   const phase = useGame((s) => s.phase)
@@ -22,6 +23,8 @@ export default function App() {
       <AudioSettings />
       <Screen />
       <Hud />
+      {/* testing only: left out of the published build */}
+      {import.meta.env.DEV && <DevPanel />}
       <FilmGrain />
     </>
   )

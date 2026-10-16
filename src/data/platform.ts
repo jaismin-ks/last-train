@@ -78,25 +78,26 @@ export const FIGURE = {
   unseenTime: 2.4,
   step: 6,
   minDistance: 6,
-  /** Walk at him and he's gone before you reach him: this close (metres), he vanishes... */
-  vanishDistance: 5,
-  /** ...and reappears out of sight this far from you (tries far first). */
-  reappearAt: [16, 14, 12, 10],
   /** While the bright light works he never comes within this distance (metres) of it. */
   brightKeepOut: 6.5,
   lane: -67.8, // his line along the platform (x), off-centre toward the wall but clear of the vending machine
   maxSeenDistance: 45, // further than this (lost in the fog) doesn't count as seeing him
 }
 
-/** Heartbeat comes in when he's this close or closer (metres), unless you're calm in the light. */
-export const FEAR_DISTANCE = 16
-
 /** Train arrival: slides in from the far end, slowing to a stop. */
 export const TRAIN_ARRIVAL = {
   distance: 150, // metres down the tunnel it starts from
   time: 12, // seconds from coming into view to stopping (the loud end of the arrival sound)
   doorsAfter: 1.4, // seconds after stopping before the doors open
-  headlight: { color: '#f4fff8', intensity: 40, distance: 30 },
+  headlight: {
+    color: '#f4fff8',
+    intensity: 90, // beam down the tunnel ahead of the train
+    distance: 70,
+    spill: 25, // light on the walls right around the front of the train
+    height: 0.75, // above the carriage floor
+    spread: 0.7, // headlamps either side of the middle (metres)
+    glare: 0.9, // size of each headlamp's glare
+  },
 }
 
 /** Walking into an open door: how close (metres, along the platform) to a door's middle. */
@@ -105,7 +106,7 @@ export const BOARDING = { doorHalfWidth: 0.85, edgeX: -69.9, fade: 1.4 }
 /** Lines and captions for the platform. */
 export const PLATFORM_TEXT = {
   firstSeen: 'Was he there before?',
-  vanished: 'Where did he go?',
+  panic: "Move. Move. Why can't I move?",
   camera: { text: 'Stand where the camera can see you' },
   cameraDead: "Its light's off. It's not even recording.",
   ritual: { text: 'Stand under the brightest light' },

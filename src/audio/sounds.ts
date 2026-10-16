@@ -220,3 +220,32 @@ export function stopAllAudio(fadeMs = 800) {
   }
   step()
 }
+
+/**
+ * Fear muffles the world: a low-pass filter over everything (0 = clear, 1 =
+ * like hearing through water). Inserted between Howler's master volume and
+ * the speakers the first time it's needed.
+ */
+let muffleFilter: BiquadFilterNode | null = null
+export function setMuffle(amount: number) {
+  const ctx = Howler.ctx
+  const master = (Howler as unknown as { masterGain?: GainNode }).masterGain
+  if (!ctx || !master) return
+  if (!muffleFilter) {
+    if (amount < 0.01) return
+    muffleFilter = ctx.createBiquadFilter()
+    muffleFilter.type = 'lowpass'
+    muffleFilter.frequency.value = 20000
+    master.disconnect()
+    master.connect(muffleFilter)
+    muffleFilter.connect(ctx.destination)
+  }
+  // exponential: 20 kHz clear → ~600 Hz fully muffled
+  const hz = 20000 * Math.pow(600 / 20000, Math.min(1, Math.max(0, amount)))
+  muffleFilter.frequency.setTargetAtTime(hz, ctx.currentTime, 0.1)
+}
+
+/** Heartbeat speeds up with fear (1 = resting pace). */
+export function setHeartbeatRate(rate: number) {
+  heartbeat.rate(rate)
+}

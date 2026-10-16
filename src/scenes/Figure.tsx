@@ -3,19 +3,28 @@ import { useFrame } from '@react-three/fiber'
 import { useGLTF } from '@react-three/drei'
 import {
   AdditiveBlending,
+  AnimationMixer,
   CanvasTexture,
   Color,
+  LoopRepeat,
   MeshBasicMaterial,
   ShaderMaterial,
+  SkinnedMesh,
   Sprite,
   SpriteMaterial,
   Vector3,
+  type AnimationAction,
   type Group,
   type Mesh,
+  type Object3D,
 } from 'three'
+import { clone as cloneRigged } from 'three/examples/jsm/utils/SkeletonUtils.js'
 import { DRACO } from '../data/street'
 
-const FIGURE_MODEL = '/assets/models/figure.glb'
+/** Rigged, with two animations: Idle (standing, breathing) and Walk (in place, two steps). */
+const FIGURE_MODEL = '/assets/models/figure-rigged.glb'
+/** Walking speed (m/s) the Walk animation's stride matches at normal playback speed. */
+const WALK_CLIP_SPEED = 1.2
 
 /**
  * How he looks. Body: unlit black (no light ever reveals a face or clothes),
@@ -42,17 +51,25 @@ export const FIGURE_LOOK = {
   blinkTime: 0.14,
 }
 
+// Skinned: the body (and its haze) bends with the walk
 const vertexShader = /* glsl */ `
+  #include <common>
+  #include <skinning_pars_vertex>
   uniform float inflate;
   varying vec3 vNormal;
   varying vec3 vView;
   varying vec3 vPos;
   void main() {
-    vec3 p = position + normal * inflate;
-    vec4 mv = modelViewMatrix * vec4(p, 1.0);
-    vNormal = normalize(normalMatrix * normal);
+    #include <skinbase_vertex>
+    #include <beginnormal_vertex>
+    #include <skinnormal_vertex>
+    #include <begin_vertex>
+    transformed += normal * inflate;
+    vPos = transformed;
+    #include <skinning_vertex>
+    vec4 mv = modelViewMatrix * vec4(transformed, 1.0);
+    vNormal = normalize(normalMatrix * objectNormal);
     vView = normalize(-mv.xyz);
-    vPos = p;
     gl_Position = projectionMatrix * mv;
   }`
 
@@ -117,11 +134,26 @@ function glowTexture() {
 /**
  * The man on the platform: a real body shape, but all black and blurred
  * like a shadow, with glowing white eyes. Origin at his feet; he faces +z and
- * the story turns him toward you. Pose baked in Blender
- * (assets-src/blender/figure.blend; the rigged original is figure-original.blend).
+ * the story turns him toward you. Rigged and animated in Blender
+ * (assets-src/blender/figure.blend: Idle + Walk; figure-original.blend is the raw download).
  */
+/**
+ * Movement the story asks for: he walks to (x, z) at `speed` m/s. With
+ * `freezeWhenSeen`, he stops dead (mid-step) whenever you're looking at him
+ * (the story sets userData.seen every frame).
+ */
+export type FigureWalk = { x: number; z: number; speed: number; freezeWhenSeen: boolean }
+export function walkTo(fig: Object3D, x: number, z: number, speed: number, freezeWhenSeen = false) {
+  fig.userData.walk = { x, z, speed, freezeWhenSeen } satisfies FigureWalk
+}
+/** Stand still where he is. */
+export const stopWalking = (fig: Object3D) => (fig.userData.walk = null)
+/** True while he's on his way somewhere. */
+export const isWalking = (fig: Object3D) => !!fig.userData.walk
+
 export const Figure = forwardRef<Group>(function Figure(_, ref) {
-  const { scene } = useGLTF(FIGURE_MODEL, DRACO)
+  const { scene, animations } = useGLTF(FIGURE_MODEL, DRACO)
+  const anim = useRef<{ mixer: AnimationMixer; idle: AnimationAction; walk: AnimationAction; walkWeight: number } | null>(null)
   const eyes = useRef<Mesh[]>([])
   const glows = useRef<Sprite[]>([])
   const blink = useRef({ next: 3, until: 0 })
@@ -146,10 +178,10 @@ export const Figure = forwardRef<Group>(function Figure(_, ref) {
   }, [])
 
   const model = useMemo(() => {
-    const root = scene.clone(true)
+    const root = cloneRigged(scene) // keeps the skeleton working on the copy
     const found: Mesh[] = []
     const sprites: Sprite[] = []
-    let body: Mesh | null = null
+    let body: SkinnedMesh | null = null
     root.traverse((o) => {
       const mesh = o as Mesh
       if (!mesh.isMesh) return
@@ -162,26 +194,37 @@ export const Figure = forwardRef<Group>(function Figure(_, ref) {
         mesh.add(glow)
         sprites.push(glow)
         found.push(mesh)
-      } else body = mesh
+      } else if ((mesh as SkinnedMesh).isSkinnedMesh) body = mesh as SkinnedMesh
     })
     if (body) {
-      const b = body as Mesh
+      const b = body as SkinnedMesh
       b.material = mats.core
       b.renderOrder = 1
-      // haze shells: the same body, slightly bigger each time and fainter
+      b.frustumCulled = false // the walk moves him outside his resting bounds
+      // haze shells: the same body on the same skeleton, slightly bigger each time and fainter
       mats.haze.forEach((m) => {
-        const shell = new (b.constructor as typeof Mesh)(b.geometry, m)
+        const shell = new SkinnedMesh(b.geometry, m)
+        shell.bind(b.skeleton, b.bindMatrix)
         shell.position.copy(b.position)
         shell.quaternion.copy(b.quaternion)
         shell.scale.copy(b.scale)
         shell.renderOrder = 2
+        shell.frustumCulled = false
         b.parent?.add(shell)
       })
     }
     eyes.current = found
     glows.current = sprites
+
+    // Idle and Walk both run all the time; their weights decide which you see
+    const mixer = new AnimationMixer(root)
+    const clip = (name: string) => animations.find((a) => a.name === name) ?? animations[0]
+    const idle = mixer.clipAction(clip('Idle'), root).setLoop(LoopRepeat, Infinity).play()
+    const walk = mixer.clipAction(clip('Walk'), root).setLoop(LoopRepeat, Infinity).play()
+    walk.setEffectiveWeight(0)
+    anim.current = { mixer, idle, walk, walkWeight: 0 }
     return root
-  }, [scene, mats])
+  }, [scene, animations, mats])
 
   useEffect(
     () => () => {
@@ -190,12 +233,48 @@ export const Figure = forwardRef<Group>(function Figure(_, ref) {
       mats.eye.dispose()
       mats.glow.map?.dispose()
       mats.glow.dispose()
+      anim.current?.mixer.stopAllAction()
     },
     [mats],
   )
 
-  useFrame(({ clock, camera }) => {
+  useFrame(({ clock, camera }, dt) => {
     const t = clock.elapsedTime
+    // Walking: toward the story's target, unless you're looking and he's creeping
+    const root = model.parent
+    const walk = root?.userData.walk as FigureWalk | null | undefined
+    let stepping = false
+    let frozenMidStep = false
+    if (root && walk) {
+      const dx = walk.x - root.position.x
+      const dz = walk.z - root.position.z
+      const d = Math.hypot(dx, dz)
+      if (d < 0.03) root.userData.walk = null
+      else if (walk.freezeWhenSeen && root.userData.seen) frozenMidStep = true
+      else {
+        const step = Math.min(d, walk.speed * Math.min(dt, 0.1))
+        root.position.x += (dx / d) * step
+        root.position.z += (dz / d) * step
+        // face the way he's walking (turning smoothly)
+        const want = Math.atan2(dx, dz)
+        const turn = Math.atan2(Math.sin(want - root.rotation.y), Math.cos(want - root.rotation.y))
+        root.rotation.y += turn * Math.min(1, dt * 6)
+        stepping = true
+      }
+    }
+    root && (root.userData.stepping = stepping)
+    root && (root.userData.frozenMidStep = frozenMidStep)
+
+    // Walk while moving; caught mid-creep he freezes mid-step; otherwise he stands
+    const a = anim.current
+    if (a) {
+      const target = stepping || frozenMidStep ? 1 : 0
+      a.walkWeight += (target - a.walkWeight) * Math.min(1, dt * 6)
+      a.walk.setEffectiveWeight(a.walkWeight)
+      a.idle.setEffectiveWeight(1 - a.walkWeight)
+      a.walk.timeScale = frozenMidStep ? 0 : (walk?.speed ?? WALK_CLIP_SPEED) / WALK_CLIP_SPEED
+      a.mixer.update(Math.min(dt, 0.1))
+    }
     for (const m of mats.haze) m.uniforms.time.value = t * FIGURE_LOOK.hazeDrift
     // Now and then he blinks: the eyes go out for a moment
     const b = blink.current

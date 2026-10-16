@@ -12,6 +12,7 @@ import { Thought } from './ui/Thought'
 import { LocationCard } from './ui/LocationCard'
 import { PauseMenu } from './ui/PauseMenu'
 import { Missed, Timer } from './ui/Timer'
+import { FearVignette } from './ui/FearVignette'
 import { StaminaBar } from './ui/StaminaBar'
 import { useEffect, useRef } from 'react'
 import type { RootState } from '@react-three/fiber'
@@ -55,9 +56,10 @@ export function Experience() {
         {/* `attempt` remounts the section on Try again (after missing the train) */}
         {showStreet && <Descent key={`street-${attempt}`} />}
         {phase === 'platform' && <Station key={`station-${attempt}`} />}
-        {phase === 'ride' && <Ride />}
+        {phase === 'ride' && <Ride key={`ride-${attempt}`} />}
       </Suspense>
     </Canvas>
+    <FearVignette />
     <Caption />
     <Thought />
     <LocationCard />
