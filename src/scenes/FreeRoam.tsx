@@ -10,21 +10,23 @@ import { useGame } from '../store'
 export type Area = { minX: number; maxX: number; minZ: number; maxZ: number; floorY: number }
 
 /**
- * Mouse look, same feel as the street (the cursor is never locked): the head
- * turns toward the cursor, and holding it near the left/right edge keeps
- * turning you, so you can still look all the way round.
+ * Controls: WASD walk (W/S forward/back where you're looking, A/D sideways).
+ * The mouse looks and turns (the cursor is never locked): the head turns
+ * toward the cursor, and holding it near the left/right edge keeps turning you.
  */
 const LOOK = {
   edgeStart: 0.6, // how far from the middle (0–1) the cursor starts turning you
-  turnSpeed: 1.8, // radians per second at the very edge
+  turnSpeed: 1.8, // radians per second with the cursor at the very edge
   maxPitchDeg: 35, // looking up / down (higher than the street: CCTV, ceiling)
 }
 const WALL_GAP = 0.45 // metres kept between you and walls
-const STRAFE = ['KeyA', 'KeyD', 'ArrowLeft', 'ArrowRight']
+/** Camera rumble the scene can set (metres of random jitter), e.g. a moving train. */
+export const cameraShake = { amount: 0 }
+const STRAFE_KEYS = ['KeyA', 'KeyD', 'ArrowLeft', 'ArrowRight']
 
 /**
- * First-person free walking: the mouse looks around (see LOOK), W/S walk where
- * you're looking, A/D step sideways, Shift runs.
+ * First-person free walking: WASD walk where you're looking (A/D sideways),
+ * the mouse looks and turns (see LOOK), Shift runs.
  * You stay inside `area` and can't walk through walls (`collide` meshes).
  */
 export function FreeRoam({ area, collide, start, startHeading }: { area: Area; collide: Object3D; start: Vector3; startHeading: number }) {
@@ -50,7 +52,7 @@ export function FreeRoam({ area, collide, start, startHeading }: { area: Area; c
     const key = (down: boolean) => (e: KeyboardEvent) => {
       if (e.code === 'KeyA' || e.code === 'ArrowLeft') strafe.current.left = down
       if (e.code === 'KeyD' || e.code === 'ArrowRight') strafe.current.right = down
-      if (STRAFE.includes(e.code)) e.preventDefault()
+      if (STRAFE_KEYS.includes(e.code)) e.preventDefault()
     }
     const kd = key(true)
     const ku = key(false)
@@ -94,7 +96,7 @@ export function FreeRoam({ area, collide, start, startHeading }: { area: Area; c
     setStamina(stamina.current, running)
     setHeartbeat(running || useGame.getState().fear)
 
-    // Look: head toward the cursor; near the edges the body keeps turning
+    // Head turns toward the cursor; near the left/right edge the body keeps turning
     if (!locked) {
       const x = i.lookX
       const edge = MathUtils.smoothstep(Math.abs(x), LOOK.edgeStart, 1) * Math.sign(x)
@@ -131,6 +133,11 @@ export function FreeRoam({ area, collide, start, startHeading }: { area: Area; c
     const bobY = advanced ? Math.sin(bob.current) * WALK.bobAmount * (useGame.getState().reduceMotion ? 0 : 1) : 0
 
     camera.position.set(pos.x, area.floorY + EYE_ABOVE_FLOOR + bobY, pos.z)
+    if (cameraShake.amount > 0) {
+      const a = cameraShake.amount * (useGame.getState().reduceMotion ? 0.2 : 1)
+      camera.position.x += (Math.random() - 0.5) * a
+      camera.position.y += (Math.random() - 0.5) * a
+    }
     const cp = Math.cos(pitch.current)
     tmp.look.set(
       pos.x + Math.sin(yaw.current) * cp,

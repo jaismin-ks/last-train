@@ -104,9 +104,9 @@ export function PauseMenu() {
             <kbd>W / S</kbd>
             <span>walk forward / back</span>
             <kbd>A / D</kbd>
-            <span>step sideways (platform)</span>
+            <span>step sideways (platform and train)</span>
             <kbd>Mouse</kbd>
-            <span>look around (hold near the edge to keep turning)</span>
+            <span>look around (to the edge of the screen to turn)</span>
             <kbd>Shift</kbd>
             <span>run</span>
             <kbd>M</kbd>

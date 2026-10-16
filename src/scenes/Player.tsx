@@ -108,7 +108,7 @@ export function Player({
     // Move along the route (forward wins if both are held)
     // On the escalator: carried down by itself, keys ignored, no footsteps
     const riding = !!ride && pos.x <= ride.fromX && pos.x >= ride.toX && distance.current > 0
-    const moving = frozen.current ? 0 : riding ? 1 : i.forward ? 1 : i.back ? -1 : 0
+    const moving = frozen.current || useGame.getState().inputLocked ? 0 : riding ? 1 : i.forward ? 1 : i.back ? -1 : 0
     const speed = riding ? ride!.speed : moving > 0 ? WALK.speed : WALK.backSpeed
     const slow = glance.current ? LOOK_BACK.walkSlowdown : 1 // you slow down while checking behind you
 

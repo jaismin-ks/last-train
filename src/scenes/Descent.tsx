@@ -1,12 +1,13 @@
 import { useEffect, useRef, useState } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
 import { Color, Fog, MathUtils, PerspectiveCamera, Vector3 } from 'three'
-import { DESCENT, EYE_HEIGHT, FOG, NIGHT_LIGHT, PLAYER_START, STREET_ROUTE } from '../data/street'
+import { DESCENT, EYE_HEIGHT, FOG, NIGHT_LIGHT, PLAYER_START, STREET_ROUTE, COUNTDOWN } from '../data/street'
 import { useGame } from '../store'
 import { NightSky } from './NightSky'
 import { SkyHaze } from './SkyHaze'
 import { Street } from './Street'
 import { Player } from './Player'
+import { Countdown } from './Countdown'
 import { StreetEffects } from './StreetEffects'
 import { startAmbience } from '../audio/sounds'
 
@@ -105,6 +106,7 @@ export function Descent() {
       {/* Lamps stay on even while hidden, so their shaders are ready (no hitch) */}
       <Street brightness={running ? Math.max(sky, 0.001) : 1} />
       {phase === 'street' && <Player route={STREET_ROUTE} street />}
+      {phase === 'street' && <Countdown {...COUNTDOWN.street} />}
       {running && <StreetEffects />}
     </>
   )

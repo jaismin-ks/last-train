@@ -12,18 +12,24 @@ export const CAPTIONS = {
     sendReply: { text: 'Send it', sub: 'Tap the send button' },
   },
   station: {
-    findPlatform: { text: 'Find your platform', sub: 'Hold W to walk  ·  Shift to run  ·  S to step back' },
-    onPlatform: { text: 'Wait for the train', sub: 'WASD to move  ·  Mouse to look (edges to turn)  ·  Shift to run' },
+    findPlatform: {
+      text: 'Get down to the platform before the last train leaves',
+      sub: 'Just hold W to keep walking  ·  Shift to run  ·  the way leads you there',
+    },
+    onPlatform: { text: 'Wait for the train', sub: 'WASD to walk  ·  Mouse to look (to the edge to turn)  ·  Shift to run' },
   },
   street: {
     // shown once when you land, like a film chapter heading
     location: { time: '11:58 PM', place: '25 St.' },
-    findSubway: { text: 'Find the subway entrance', sub: 'Hold W to walk  ·  Shift to run  ·  Move the mouse to look' },
+    findSubway: {
+      text: 'Get to the subway before the station closes',
+      sub: 'Just hold W to keep walking  ·  Shift to run  ·  the street leads you there',
+    },
   },
 }
 
 /** How long street captions stay up after you start walking (seconds). */
-export const STREET_CAPTION_TIME = 6
+export const STREET_CAPTION_TIME = 8
 
 /**
  * Inner thoughts: rare lines in her voice. `at` is how far along the walk

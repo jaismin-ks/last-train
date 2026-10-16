@@ -1,13 +1,14 @@
 import { useEffect, useMemo, useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
 import { useGLTF } from '@react-three/drei'
-import { Box3, DoubleSide, MathUtils, Vector3, type Group, type Mesh, type MeshStandardMaterial, type Object3D } from 'three'
+import { Box3, Color, DoubleSide, MathUtils, Vector3, type Group, type Mesh, type MeshStandardMaterial, type Object3D, type PointLight } from 'three'
 import { DRACO } from '../data/street'
 import markers from '../data/train-markers.json'
 import { useGame } from '../store'
 import { TRAIN_ARRIVAL } from '../data/platform'
+import { playTrainDoors } from '../audio/sounds'
 
-const TRAIN_MODEL = '/assets/models/train.glb'
+export const TRAIN_MODEL = '/assets/models/train.glb'
 /** Materials that really are see-through (the window glass). */
 const SEE_THROUGH = ['windows']
 /** Materials that should reflect light exactly like the train body. */
@@ -17,9 +18,18 @@ const MATCH_BODY = ['side_door', 'front_door']
 export const TRAIN = {
   doorSpeed: 2.2, // how quickly the doors move (higher = snappier)
   light: { color: '#e9fff2', intensity: 6, distance: 13 }, // one cold fluorescent per carriage
+  glassOpacity: 0.3, // window glass: 0 = invisible, 1 = solid
 }
 
 type Leaf = { node: Object3D; closedZ: number; dir: number; platform: boolean }
+
+/**
+ * Carriage lights the story can drive: `level` 0–1 (flicker, dim) and
+ * `emergency` 0–1 (blends to dim red emergency lighting).
+ */
+export const trainLights = { level: 1, emergency: 0 }
+const EMERGENCY_COLOR = new Color('#ff4a32')
+const NORMAL_COLOR = new Color(TRAIN.light.color)
 
 /** Middle of each platform-side door when the train is stopped (filled once the model loads). */
 export const trainDoorCenters: Vector3[] = []
@@ -35,12 +45,39 @@ export function Train() {
   const doorsOpen = useGame((s) => s.trainDoorsOpen)
   const trainState = useGame((s) => s.trainState)
   const group = useRef<Group>(null)
+  const lights = useRef<(PointLight | null)[]>([])
   const arrivedAt = useRef<number | null>(null)
   const startedAt = useRef<number | null>(null)
   // Front of the train (far end of the platform), for the headlight
   const front = useMemo(() => {
     const box = new Box3().setFromObject(scene)
     return new Vector3(markers.cars[0][0], box.min.y + 1.6, box.max.z + 0.3)
+  }, [scene])
+
+  // The model only has one door per carriage on the far side; the other openings
+  // were empty (looked like open doors while moving). Fill them with mirrored
+  // copies of the platform-side doors. These never open.
+  useMemo(() => {
+    if (scene.userData.farDoorsFilled) return
+    scene.userData.farDoorsFilled = true
+    const far = markers.doors.filter((d) => d.side === 'far')
+    for (const d of markers.doors) {
+      if (d.side !== 'platform') continue
+      const src = scene.getObjectByName(d.name)
+      const farX = far.map((f) => scene.getObjectByName(f.name)).find((n) => n && n.parent === src?.parent)?.position.x
+      if (!src || farX === undefined) continue
+      // skip the one the model already has (same place along the carriage)
+      const taken = far.some((f) => {
+        const n = scene.getObjectByName(f.name)
+        return n && n.parent === src.parent && Math.abs(n.position.z - src.position.z) < 0.2
+      })
+      if (taken) continue
+      const copy = src.clone()
+      copy.name = `${d.name}_FarCopy`
+      copy.position.x = farX
+      copy.scale.x *= -1 // mirror so the outside faces out
+      src.parent?.add(copy)
+    }
   }, [scene])
 
   // Each half slides away from the middle of its door: half A one way, B the other
@@ -101,6 +138,13 @@ export function Train() {
         m.roughnessMap = body.roughnessMap
         m.envMapIntensity = body.envMapIntensity
       }
+      // Window glass: mostly clear, so you see the tunnel from inside and the
+      // carriage from the platform (the texture alone left it milky)
+      if (SEE_THROUGH.includes(m.name)) {
+        m.opacity = TRAIN.glassOpacity
+        m.roughness = 0.2
+        m.depthWrite = false
+      }
       if (!SEE_THROUGH.includes(m.name)) {
         m.transparent = false
         m.opacity = 1
@@ -132,14 +176,22 @@ export function Train() {
         const ease = 1 - (1 - k) ** 3 // fast in, braking to a stop
         g.position.z = TRAIN_ARRIVAL.distance * (1 - ease)
         if (k >= 1) useGame.getState().setTrainState('stopped')
+      } else if (trainState === 'riding') {
+        g.position.z = 0
       } else if (trainState === 'stopped') {
         g.position.z = 0
         if (arrivedAt.current === null) arrivedAt.current = clock.elapsedTime
         if (clock.elapsedTime - arrivedAt.current > TRAIN_ARRIVAL.doorsAfter && !useGame.getState().trainDoorsOpen && arrivedAt.current > 0) {
           arrivedAt.current = -1 // doors open once; after that they're left to the story
           useGame.getState().setTrainDoorsOpen(true)
+          playTrainDoors()
         }
       }
+    }
+    for (const l of lights.current) {
+      if (!l) continue
+      l.intensity = TRAIN.light.intensity * trainLights.level
+      l.color.copy(NORMAL_COLOR).lerp(EMERGENCY_COLOR, trainLights.emergency)
     }
     for (const l of leaves) {
       const target = l.closedZ + (doorsOpen && l.platform ? l.dir * markers.doorSlide : 0)
@@ -161,7 +213,7 @@ export function Train() {
       )}
       {/* one light per carriage keeps the game light; markers.lights has 5 per car if needed */}
       {(markers.cars as [number, number, number][]).map((c) => [c[0], c[1] + 2.25, c[2]] as [number, number, number]).map((p, i) => (
-        <pointLight key={i} position={p} color={TRAIN.light.color} intensity={TRAIN.light.intensity} distance={TRAIN.light.distance} decay={2} />
+        <pointLight key={i} ref={(el) => (lights.current[i] = el)} position={p} color={TRAIN.light.color} intensity={TRAIN.light.intensity} distance={TRAIN.light.distance} decay={2} />
       ))}
     </group>
   )

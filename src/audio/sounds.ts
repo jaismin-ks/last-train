@@ -159,6 +159,42 @@ export function setHeartbeat(on: boolean) {
   }
 }
 
+/**
+ * The train. Arrival is shaped in ffmpeg: ~15 s of faint far-off rumble, then
+ * it builds as the train comes in, stopping at ~29 s.
+ */
+const trainArrive = sfx('train-arrive', 0.9)
+const trainDoors = sfx('train-doors', 0.7)
+const trainChime = sfx('train-chime', 0.6)
+export const TRAIN_ARRIVE_STOPS_AT = 29 // seconds into the arrival sound when the train has stopped
+export const playTrainArrive = () => trainArrive.play()
+export const playTrainDoors = () => trainDoors.play()
+export const playTrainChime = () => trainChime.play()
+/** Braking hard: the loud end of the arrival recording. */
+export function playTrainBrake(volume = 0.8) {
+  const id = trainArrive.play()
+  trainArrive.seek(19, id)
+  trainArrive.volume(volume, id)
+}
+
+/** Running rumble inside the carriage (stand-in loop cut from the arrival). Speed 0–1. */
+const TRAIN_RUN_VOLUME = 0.45
+const trainRun = sfx('train-run-loop', 0, { loop: true })
+let trainRunOn = false
+export function setTrainRun(speed: number) {
+  if (speed > 0.01 && !trainRunOn) {
+    trainRunOn = true
+    trainRun.play()
+  }
+  if (!trainRunOn) return
+  trainRun.volume(TRAIN_RUN_VOLUME * Math.min(1, speed * 1.3))
+  trainRun.rate(0.65 + 0.35 * speed) // deeper when slow
+  if (speed <= 0.01) {
+    trainRunOn = false
+    trainRun.stop()
+  }
+}
+
 /** Freezes every sound where it is (pause menu) and picks up again on resume. */
 export function setAudioPaused(paused: boolean) {
   const ctx = Howler.ctx
@@ -169,7 +205,7 @@ export function setAudioPaused(paused: boolean) {
 
 /** Silences everything for good (leaving the game for the resources screen). */
 export function stopAllAudio(fadeMs = 800) {
-  ambienceOn = stationOn = escalatorOn = heartbeatOn = false
+  ambienceOn = stationOn = escalatorOn = heartbeatOn = trainRunOn = false
   setAudioPaused(false)
   const master = Howler.volume()
   const start = performance.now()

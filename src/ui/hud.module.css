@@ -68,3 +68,24 @@
 .emergency { font-size: 13px; color: var(--text); letter-spacing: 0.04em; line-height: 1.7; }
 
 @keyframes fade { from { opacity: 0 } to { opacity: 1 } }
+
+/* Countdown: top centre, quiet until the last seconds */
+.timer {
+  position: fixed; top: 20px; left: 50%; transform: translateX(-50%); z-index: 6;
+  display: grid; justify-items: center; gap: 2px; pointer-events: none;
+  color: var(--text); text-shadow: 0 0 14px rgba(0, 0, 0, 0.9);
+  animation: fade 0.8s ease both;
+}
+.timerLabel { font-size: 10px; letter-spacing: 0.35em; text-transform: uppercase; color: var(--text-dim); }
+.timerClock { font-family: var(--font-ui); font-size: 26px; letter-spacing: 0.08em; font-variant-numeric: tabular-nums; }
+.timerWarn .timerClock { color: #e0453a; animation: pulse 1s ease-in-out infinite; }
+.timerWarn .timerLabel { color: #b9574f; }
+
+/* Missed the train */
+.missed {
+  position: fixed; inset: 0; z-index: 30; padding: 24px;
+  display: flex; align-items: center; justify-content: center; text-align: center;
+  background: #000; animation: fade 1.6s ease both;
+}
+
+@keyframes pulse { 50% { opacity: 0.45 } }

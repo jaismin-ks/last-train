@@ -2,11 +2,11 @@ import { useEffect, useMemo, useRef } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
 import { Frustum, MathUtils, Matrix4, Vector3, type Group } from 'three'
 import { useGame } from '../store'
-import { BOARDING, FEAR_DISTANCE, FIGURE, PLATFORM_STORY as S, PLATFORM_TEXT as TEXT } from '../data/platform'
+import { BOARDING, FEAR_DISTANCE, FIGURE, PLATFORM_STORY as S, PLATFORM_TEXT as TEXT, TRAIN_ARRIVAL } from '../data/platform'
 import { PLATFORM_TUBES, tubeLevel, tubeZ } from './PlatformLights'
 import { trainDoorCenters } from './Train'
-import { CCTV_POSITION, cctvState } from './CCTV'
-import { playPresence } from '../audio/sounds'
+import { CCTV_FORWARD, CCTV_POSITION, cctvState } from './CCTV'
+import { playPresence, playTrainArrive, playTrainChime, TRAIN_ARRIVE_STOPS_AT } from '../audio/sounds'
 import { Figure } from './Figure'
 
 type Beat =
@@ -52,6 +52,7 @@ export function PlatformStory() {
     lastMove: -Infinity,
     appearTube: -1,
     appearedAt: -1,
+    vanished: false, // he's vanished on you at least once
     moves: 0,
     hold: 0, // seconds doing the current ritual
     skip: false, // dev: N pressed
@@ -131,12 +132,47 @@ export function PlatformStory() {
       if (fig) fig.userData.eyesOpen = true
     }
 
+    // The bright light is yours: while it works, he never stands in it
+    const brightAlive = !['dying', 'dark', 'waitTrain', 'train', 'board', 'boarding'].includes(s.beat)
+    const brightZ = tubeZ(S.brightTube)
+    const outOfLight = (z: number, side: number) =>
+      brightAlive && Math.abs(z - brightZ) < FIGURE.brightKeepOut ? brightZ + (Math.sign(z - brightZ) || side) * FIGURE.brightKeepOut : z
+
     /** Puts him `fromMe` metres from you along the platform, on his side. */
     const placeAt = (fromMe: number) => {
       if (!fig) return
       const side = Math.sign(fig.position.z - me.z) || 1
-      fig.position.z = MathUtils.clamp(me.z + side * fromMe, PLATFORM_Z[0], PLATFORM_Z[1])
+      const z = outOfLight(me.z + side * fromMe, side)
+      fig.position.z = MathUtils.clamp(z, PLATFORM_Z[0], PLATFORM_Z[1])
       fig.position.x = FIGURE.lane
+    }
+
+    // Walk at him and he's gone before you get there: he reappears out of sight
+    if (fig?.visible && Math.hypot(me.x - fig.position.x, me.z - fig.position.z) < FIGURE.vanishDistance) {
+      camera.getWorldDirection(tmp.look)
+      const behind = tmp.look.z > 0 ? -1 : 1 // prefer the end of the platform behind you
+      let best: number | null = null
+      search: for (const d of FIGURE.reappearAt)
+        for (const side of [behind, -behind]) {
+          const z = me.z + side * d
+          if (z < PLATFORM_Z[0] || z > PLATFORM_Z[1]) continue
+          if (brightAlive && Math.abs(z - brightZ) < FIGURE.brightKeepOut) continue
+          tmp.chest.set(FIGURE.lane, FLOOR_Y + 1.3, z)
+          if (tmp.frustum.containsPoint(tmp.chest)) continue
+          best = z
+          break search
+        }
+      // nowhere out of sight: the far end from you
+      if (best === null) best = me.z - PLATFORM_Z[0] > PLATFORM_Z[1] - me.z ? PLATFORM_Z[0] : PLATFORM_Z[1]
+      fig.position.set(FIGURE.lane, FLOOR_Y, best)
+      s.unseenFor = 0
+      s.lastMove = now
+      inView = false
+      dist = Infinity
+      if (s.revealed && !s.vanished) {
+        s.vanished = true
+        game.setThought(TEXT.vanished)
+      }
     }
 
     /** He creeps closer, but only while you can't see him. */
@@ -227,12 +263,14 @@ export function PlatformStory() {
         break
 
       case 'camera': {
-        // stand near the camera and look up at it
-        const near = Math.hypot(me.x - CCTV_POSITION.x, me.z - CCTV_POSITION.z) < S.cameraRadius
+        // stand where it can see you, facing it (flat angles: up/down doesn't matter)
+        tmp.to.set(me.x - CCTV_POSITION.x, 0, me.z - CCTV_POSITION.z) // camera → you
+        const seen = tmp.to.length() < S.cameraRadius && CCTV_FORWARD.angleTo(tmp.to) < MathUtils.degToRad(S.cameraViewDeg)
         camera.getWorldDirection(tmp.look)
-        tmp.to.copy(CCTV_POSITION).sub(me).normalize()
-        const looking = tmp.look.angleTo(tmp.to) < MathUtils.degToRad(S.cameraLookDeg)
-        s.hold = near && looking ? s.hold + dt : Math.max(0, s.hold - dt)
+        tmp.look.y = 0
+        tmp.to.negate() // you → camera
+        const facing = tmp.look.angleTo(tmp.to) < MathUtils.degToRad(S.cameraLookDeg)
+        s.hold = seen && facing ? s.hold + dt : Math.max(0, s.hold - dt)
         if (s.hold >= S.cameraHold || s.skip) {
           cctvState.diesAt = now // its light stutters and dies
           game.setCaption(null)
@@ -283,13 +321,16 @@ export function PlatformStory() {
         // every light cuts out for a moment (that's when he moved), then the rest come back
         const blackout = t < S.allDarkTime
         for (let i = 0; i < TUBES; i++) if (i !== S.brightTube) tubeLevel[i] = blackout ? 0 : 1
-        if (t > S.darkTime) go('waitTrain', now)
+        if (t > S.darkTime) {
+          playTrainArrive() // faint rumble far down the tunnel, building
+          go('waitTrain', now)
+        }
         break
       }
 
       case 'waitTrain':
         creep()
-        if (t > S.trainDelay) {
+        if (t > TRAIN_ARRIVE_STOPS_AT - TRAIN_ARRIVAL.time) {
           game.setTrainState('arriving')
           game.setThought(TEXT.trainHeard)
           go('train', now)
@@ -308,6 +349,7 @@ export function PlatformStory() {
         if (atDoor) {
           game.setCaption(null)
           game.setInputLocked(true)
+          playTrainChime()
           go('boarding', now)
         }
         break

@@ -96,6 +96,20 @@ export const SUBWAY_LIGHTS = {
 /** The "Press E" spot in front of the subway stairs, [x, z], and how close you must be. */
 export const SUBWAY_ENTRANCE = { x: markers.subwayInteract[0], z: markers.subwayInteract[2], radius: 1.6 } // walk this close and it fades into the station
 
+/**
+ * Countdowns. Street: the station closes for the night, so you rush to get in.
+ * Inside, the clock resets: the last train leaves soon. Seconds, set from the
+ * walks themselves:
+ *   street  108 m: ~32 s walking with the two glances back. 36 s leaves a few
+ *           seconds for a first-timer to get going; running buys more.
+ *   station 128 m incl. the escalator: ~46 s walking with the glances. 55 s.
+ */
+export const COUNTDOWN = {
+  street: { seconds: 36, label: 'Station closes in', missed: 'The station gates came down before you got there.' },
+  station: { seconds: 55, label: 'Last train leaves in', missed: 'The doors closed as you reached the platform.' },
+  warnAt: 10, // last seconds turn red
+}
+
 /** Fade timings (seconds) for scene changes. */
 export const SCENE_FADE = { out: 1.6, in: 2.0 } // street → black → station
 

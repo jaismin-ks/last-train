@@ -38,10 +38,15 @@ export const PLATFORM_STORY = {
   /** ...or this long after he appears, even if you never looked his way. */
   ritualLatest: 16,
 
-  /** CCTV ritual: stand within this distance (metres) and look at the camera for `cameraHold` seconds. */
-  cameraRadius: 4.5,
-  cameraLookDeg: 18, // how close to the middle of the screen it must be
-  cameraHold: 1.5,
+  /**
+   * CCTV ritual: stand where the camera can see you (in front of it, within
+   * `cameraRadius` metres and `cameraViewDeg` of where it points) while facing
+   * it (left/right within `cameraLookDeg`; up/down doesn't matter) for `cameraHold` seconds.
+   */
+  cameraRadius: 9,
+  cameraViewDeg: 55,
+  cameraLookDeg: 30,
+  cameraHold: 1.2,
   /** After the camera's light dies, seconds before the next ritual. */
   cameraAfter: 6,
 
@@ -60,8 +65,8 @@ export const PLATFORM_STORY = {
   /** In the dark he closes in to this distance from you (metres). */
   darkApproach: 7,
 
-  /** Seconds after the light dies before the train starts arriving. */
-  trainDelay: 5,
+  // The train is heard (faintly, far down the tunnel) as soon as the light dies;
+  // it comes into view so that it stops exactly when the arrival sound does.
 }
 
 /**
@@ -73,6 +78,12 @@ export const FIGURE = {
   unseenTime: 2.4,
   step: 6,
   minDistance: 6,
+  /** Walk at him and he's gone before you reach him: this close (metres), he vanishes... */
+  vanishDistance: 5,
+  /** ...and reappears out of sight this far from you (tries far first). */
+  reappearAt: [16, 14, 12, 10],
+  /** While the bright light works he never comes within this distance (metres) of it. */
+  brightKeepOut: 6.5,
   lane: -67.8, // his line along the platform (x), off-centre toward the wall but clear of the vending machine
   maxSeenDistance: 45, // further than this (lost in the fog) doesn't count as seeing him
 }
@@ -83,7 +94,7 @@ export const FEAR_DISTANCE = 16
 /** Train arrival: slides in from the far end, slowing to a stop. */
 export const TRAIN_ARRIVAL = {
   distance: 150, // metres down the tunnel it starts from
-  time: 10, // seconds to come to a stop
+  time: 12, // seconds from coming into view to stopping (the loud end of the arrival sound)
   doorsAfter: 1.4, // seconds after stopping before the doors open
   headlight: { color: '#f4fff8', intensity: 40, distance: 30 },
 }
@@ -94,6 +105,7 @@ export const BOARDING = { doorHalfWidth: 0.85, edgeX: -69.9, fade: 1.4 }
 /** Lines and captions for the platform. */
 export const PLATFORM_TEXT = {
   firstSeen: 'Was he there before?',
+  vanished: 'Where did he go?',
   camera: { text: 'Stand where the camera can see you' },
   cameraDead: "Its light's off. It's not even recording.",
   ritual: { text: 'Stand under the brightest light' },
@@ -109,5 +121,8 @@ export const CCTV = {
   yawDeg: -35, // 0 = pointing straight across at the tracks; negative turns it toward the gate end
   scale: 1.5, // model is ~50 cm long; bigger so it reads from the platform
   ledColor: '#ff2a1a',
+  glowSize: 0.45, // metres across the red glow around the light
+  glowStrength: 0.95,
+  lightIntensity: 2.5, // red light it casts on the wall around it
   blinkEvery: 1.6, // seconds per blink while it "works"
 }

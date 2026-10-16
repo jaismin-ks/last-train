@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
 import { useGLTF } from '@react-three/drei'
 import { Box3, DoubleSide, Vector3, type Mesh, type MeshStandardMaterial, type PerspectiveCamera } from 'three'
-import { DRACO, SCENE_FADE } from '../data/street'
+import { COUNTDOWN, DRACO, SCENE_FADE } from '../data/street'
 import { useGame } from '../store'
 import { type PresenceKind, playClang, setEscalatorVolume, setFootsteps, startStationAmbience, stopAmbience, stopEscalator, stopStationAmbience } from '../audio/sounds'
 import markers from '../data/station-markers.json'
@@ -16,6 +16,7 @@ import { disposeTree } from '../systems/dispose'
 import { PlatformLights } from './PlatformLights'
 import { PlatformStory } from './PlatformStory'
 import { CCTV } from './CCTV'
+import { Countdown } from './Countdown'
 import { StreetEffects } from './StreetEffects'
 
 const STATION_MODEL = '/assets/models/station.glb'
@@ -171,6 +172,8 @@ export function Station() {
       {/* Hidden until the story brings it in */}
       <Train />
       {free && <PlatformStory />}
+      {/* new clock for the last train; made it once you're on the platform */}
+      {!free && <Countdown {...COUNTDOWN.station} />}
       <primitive object={scene} />
       {!free && (
         <Player

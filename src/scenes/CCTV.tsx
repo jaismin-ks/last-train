@@ -1,7 +1,18 @@
-import { useMemo } from 'react'
+import { useMemo, useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
 import { useGLTF } from '@react-three/drei'
-import { Color, MathUtils, MeshBasicMaterial, Vector3, type Mesh, type MeshStandardMaterial } from 'three'
+import {
+  AdditiveBlending,
+  CanvasTexture,
+  Color,
+  MathUtils,
+  MeshBasicMaterial,
+  SpriteMaterial,
+  Vector3,
+  type Mesh,
+  type MeshStandardMaterial,
+  type PointLight,
+} from 'three'
 import { DRACO } from '../data/street'
 import { CCTV as C } from '../data/platform'
 
@@ -27,11 +38,40 @@ const toWorld = (local: Vector3) =>
 
 /** Where the camera is, for the story's "are you looking at it" check. */
 export const CCTV_POSITION = toWorld(BODY_AT)
+/** Which way the lens points, flat (for "can it see you"). */
+export const CCTV_FORWARD = new Vector3(-1, 0, 0).applyAxisAngle(new Vector3(0, 1, 0), yaw)
+
+/** Soft round glow (drawn once on a small canvas). */
+function glowTexture() {
+  const c = document.createElement('canvas')
+  c.width = c.height = 64
+  const g = c.getContext('2d')!
+  const grad = g.createRadialGradient(32, 32, 0, 32, 32, 32)
+  grad.addColorStop(0, 'rgba(255,255,255,1)')
+  grad.addColorStop(0.18, 'rgba(255,255,255,0.6)')
+  grad.addColorStop(1, 'rgba(255,255,255,0)')
+  g.fillStyle = grad
+  g.fillRect(0, 0, 64, 64)
+  return new CanvasTexture(c)
+}
 
 /** The security camera on the platform wall, with a red recording light. */
 export function CCTV() {
   const { scene } = useGLTF(CCTV_MODEL, DRACO)
-  const led = useMemo(() => new MeshBasicMaterial({ color: new Color(C.ledColor), toneMapped: false }), [])
+  const led = useMemo(() => new MeshBasicMaterial({ color: new Color(C.ledColor), toneMapped: false, fog: false }), [])
+  const glow = useMemo(
+    () =>
+      new SpriteMaterial({
+        map: glowTexture(),
+        color: new Color(C.ledColor),
+        blending: AdditiveBlending,
+        depthWrite: false,
+        fog: false, // stays visible from down the platform
+        toneMapped: false,
+      }),
+    [],
+  )
+  const light = useRef<PointLight>(null)
 
   // Without reflections to show, fully metallic surfaces render nearly black
   useMemo(() => {
@@ -45,17 +85,23 @@ export function CCTV() {
   useFrame(({ clock }) => {
     const t = clock.elapsedTime
     let on: boolean
-    if (cctvState.diesAt < 0 || t < cctvState.diesAt) on = t % C.blinkEvery < C.blinkEvery * 0.45
+    if (cctvState.diesAt < 0 || t < cctvState.diesAt) on = t % C.blinkEvery < C.blinkEvery * 0.6
     else on = t - cctvState.diesAt < 0.9 && Math.random() < 0.4 // a last stutter, then nothing
     led.color.set(on ? C.ledColor : '#1a0504')
+    glow.opacity = on ? C.glowStrength : 0
+    if (light.current) light.current.intensity = on ? C.lightIntensity : 0
   })
 
   return (
     <group position={C.position} rotation={[0, yaw, 0]} scale={C.scale}>
       <primitive object={scene} />
-      <mesh material={led} position={LED_AT}>
-        <sphereGeometry args={[0.011, 10, 8]} />
-      </mesh>
+      <group position={LED_AT}>
+        <mesh material={led}>
+          <sphereGeometry args={[0.018, 10, 8]} />
+        </mesh>
+        <sprite material={glow} scale={C.glowSize / C.scale} position={[-0.03, 0, 0]} />
+        <pointLight ref={light} position={[-0.12, 0, 0]} color={C.ledColor} intensity={C.lightIntensity} distance={2.5} decay={2} />
+      </group>
     </group>
   )
 }

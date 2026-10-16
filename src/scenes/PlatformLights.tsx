@@ -1,6 +1,6 @@
 import { useMemo, useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
-import { MeshBasicMaterial, type PointLight } from 'three'
+import { MeshBasicMaterial, MeshStandardMaterial, type PointLight } from 'three'
 import { useGame } from '../store'
 import { PLATFORM_STORY } from '../data/platform'
 
@@ -21,6 +21,8 @@ export const PLATFORM_TUBES = {
   distance: 9, // short reach: pools of light with dark gaps between
   flicker: [3], // the one tube that flickers
   dead: [1, 5], // tubes that are out (dark stretches)
+  /** Each tube hangs from the ceiling in a metal housing on two rods. */
+  fixture: { ceilingY: -4.05, rodSpacing: 1.0, color: '#2c312e' },
   /** The brightest tube: whiter, stronger, reaches further. */
   bright: { index: PLATFORM_STORY.brightTube, color: '#e4fff0', intensity: 16, distance: 11 },
 }
@@ -55,6 +57,8 @@ export function PlatformLights() {
     [tubes, T],
   )
   const lights = useRef<(PointLight | null)[]>([])
+  const metal = useMemo(() => new MeshStandardMaterial({ color: T.fixture.color, roughness: 0.6, metalness: 0.3 }), [T.fixture.color])
+  const rodLength = T.fixture.ceilingY - (T.y + 0.06)
 
   useFrame(({ clock }) => {
     const t = clock.elapsedTime
@@ -79,6 +83,15 @@ export function PlatformLights() {
             <mesh material={mats[i]}>
               <boxGeometry args={[0.09, 0.06, T.tubeLength]} />
             </mesh>
+            {/* housing over the tube, hung from the ceiling on two rods */}
+            <mesh material={metal} position={[0, 0.05, 0]}>
+              <boxGeometry args={[0.16, 0.05, T.tubeLength + 0.12]} />
+            </mesh>
+            {[-1, 1].map((side) => (
+              <mesh key={side} material={metal} position={[0, 0.06 + rodLength / 2, (side * T.fixture.rodSpacing) / 2]}>
+                <cylinderGeometry args={[0.01, 0.01, rodLength, 6]} />
+              </mesh>
+            ))}
             {!T.dead.includes(i) && (
               <pointLight
                 ref={(el) => (lights.current[i] = el)}

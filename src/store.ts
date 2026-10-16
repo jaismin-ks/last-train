@@ -28,9 +28,14 @@ type GameState = {
   trainDoorsOpen: boolean // platform-side train doors
   platformLightsOn: boolean // station lights (go dark later in the story)
   running: boolean
-  trainState: 'hidden' | 'arriving' | 'stopped' // the train on the platform
+  trainState: 'hidden' | 'arriving' | 'stopped' | 'riding' // riding: you're inside, doors left to the story
   inputLocked: boolean // cutscene moments: walking and looking are off
   fear: boolean // something nearby is frightening (heartbeat)
+  countdown: number | null // seconds left to catch the train (null = no timer running)
+  countdownLabel: string // what the countdown is to ("Station closes in")
+  missedLine: string // what happened, on the missed screen
+  missed: boolean // the countdown ran out
+  attempt: number // bumps on Try again, restarting the current section
   muted: boolean // sound off (M or the speaker button), remembered between visits
   volume: number // 0–1 master volume
   reduceMotion: boolean // no head bob or head tilt
@@ -49,6 +54,10 @@ type GameState = {
   setTrainState: (state: GameState['trainState']) => void
   setInputLocked: (locked: boolean) => void
   setFear: (fear: boolean) => void
+  setCountdown: (seconds: number | null) => void
+  startCountdown: (seconds: number, label: string, missedLine: string) => void
+  setMissed: (missed: boolean) => void
+  retry: () => void
   setMuted: (muted: boolean) => void
   setVolume: (volume: number) => void
   setReduceMotion: (on: boolean) => void
@@ -106,6 +115,11 @@ export const useGame = create<GameState>((set, get) => {
   trainState: 'hidden',
   inputLocked: false,
   fear: false,
+  countdown: null,
+  countdownLabel: '',
+  missedLine: '',
+  missed: false,
+  attempt: 0,
   ...settings,
   setPhase: (phase) => set({ phase }),
   setBattery: (battery) => set({ battery: Math.max(0, Math.min(100, battery)) }),
@@ -122,6 +136,23 @@ export const useGame = create<GameState>((set, get) => {
   setTrainState: (trainState) => set({ trainState }),
   setInputLocked: (inputLocked) => set({ inputLocked }),
   setFear: (fear) => set({ fear }),
+  setCountdown: (countdown) => set({ countdown }),
+  startCountdown: (countdown, countdownLabel, missedLine) => set({ countdown, countdownLabel, missedLine }),
+  setMissed: (missed) => set({ missed }),
+  retry: () =>
+    set((s) => ({
+      attempt: s.attempt + 1,
+      missed: false,
+      countdown: null,
+      inputLocked: false,
+      stamina: 1,
+      running: false,
+      fear: false,
+      thought: null,
+      caption: null,
+      prompt: null,
+      blackout: 0,
+    })),
   setMuted: (muted) => saveAfter({ muted }),
   setVolume: (volume) => saveAfter({ volume: Math.max(0, Math.min(1, volume)), muted: volume > 0 ? false : get().muted }),
   setReduceMotion: (reduceMotion) => saveAfter({ reduceMotion }),

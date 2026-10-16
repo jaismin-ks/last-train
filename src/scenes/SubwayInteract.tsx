@@ -25,6 +25,7 @@ export function SubwayInteract({ onEnter }: { onEnter: () => void }) {
     if (d >= SUBWAY_ENTRANCE.radius) return
     leaving.current = clock.elapsedTime
     onEnter() // stops the player walking
+    useGame.getState().setCountdown(null) // made it in time
     setFootsteps(0)
     stopAmbience(SCENE_FADE.out * 1000)
   })

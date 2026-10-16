@@ -11,10 +11,12 @@ import { Caption } from './ui/Caption'
 import { Thought } from './ui/Thought'
 import { LocationCard } from './ui/LocationCard'
 import { PauseMenu } from './ui/PauseMenu'
+import { Missed, Timer } from './ui/Timer'
 import { StaminaBar } from './ui/StaminaBar'
 import { useEffect, useRef } from 'react'
 import type { RootState } from '@react-three/fiber'
 import { Station } from './scenes/Station'
+import { Ride } from './scenes/Ride'
 
 /** The phone scene happens far below the street, hidden in the black fog. */
 const PHONE_RIG_Y = -300
@@ -22,6 +24,7 @@ const PHONE_RIG_Y = -300
 export function Experience() {
   const phase = useGame((s) => s.phase)
   const paused = useGame((s) => s.paused)
+  const attempt = useGame((s) => s.attempt)
   const three = useRef<RootState | null>(null)
   // On resume, skip the time spent paused so cutscenes and walking don't jump
   useEffect(() => {
@@ -49,14 +52,18 @@ export function Experience() {
       </Suspense>
       {/* Own boundary, so the phone never blanks out while the street finishes loading */}
       <Suspense fallback={null}>
-        {showStreet && <Descent />}
-        {phase === 'platform' && <Station />}
+        {/* `attempt` remounts the section on Try again (after missing the train) */}
+        {showStreet && <Descent key={`street-${attempt}`} />}
+        {phase === 'platform' && <Station key={`station-${attempt}`} />}
+        {phase === 'ride' && <Ride />}
       </Suspense>
     </Canvas>
     <Caption />
     <Thought />
     <LocationCard />
     <PauseMenu />
+    <Timer />
+    <Missed />
     <StaminaBar />
     <Prompt />
     <Fader />
