@@ -23,7 +23,7 @@ import { StationStop } from './StationStop'
 import { useGame } from '../store'
 import { playKeyTap, playLowBattery, playOwnKeys, playPresence, playTrainBrake, playTrainChime, playTrainDoors, setTrainRun, stopAllAudio } from '../audio/sounds'
 import { Train, TRAIN_MODEL, trainDoorCenters, trainLights } from './Train'
-import { FreeRoam, autoWalk, cameraShake, seat } from './FreeRoam'
+import { FreeRoam, autoWalk, cameraShake, seat, standing } from './FreeRoam'
 import { Figure, isWalking, stopWalking, walkTo } from './Figure'
 import { addFear, fearFocus, freezeForGood, resetFear, stepFear } from '../systems/fear'
 import { APPROACH, CAUGHT, FEAR, FIGURE_WALK } from '../data/fear'
@@ -280,6 +280,7 @@ export function Ride() {
     flickerUntil: 0,
     said: new Set<string>(),
     lastMe: null as Vector3 | null,
+    wardUntil: 0, // after a ritual he keeps his distance until then
     strikes: 0,
     finalStrike: false, // the third freeze: he walks all the way to you
     approachedAt: -99, // last time you walked toward him
@@ -344,6 +345,7 @@ export function Ride() {
       s.since -= 1000
       s.started -= 1000
       s.ritualAt -= 1000
+      s.wardUntil -= 1000
       if (s.seenAt < 0 && figure.current?.visible) s.seenAt = 0.001
       if (s.beat === 'held') s.nextFlicker = 0
     }
@@ -431,11 +433,17 @@ export function Ride() {
     if (fig) fig.userData.seen = inView
     Object.assign(fearFocus, fig?.visible ? { active: true, x: fig.position.x, y: fig.position.y + 1.68, z: fig.position.z } : { active: false })
 
-    // How far YOU just moved toward him (him walking toward you doesn't count)
+    // A ritual keeps him off you: while you're doing it, and for a little while after
+    const warded = s.ritual === 'doing' || now < s.wardUntil
+
+    // How far YOU just walked toward him (him walking toward you doesn't count, nor
+    // the train's shake, nor sitting down or standing up)
     let towardHim = 0
-    if (fig && s.lastMe && inYourCarriage) {
-      tmp.p.set(fig.position.x - me.x, 0, fig.position.z - me.z).normalize()
-      towardHim = Math.max(0, (me.x - s.lastMe.x) * tmp.p.x + (me.z - s.lastMe.z) * tmp.p.z)
+    if (fig && s.lastMe && inYourCarriage && !seat.active && !warded) {
+      const dx = standing.x - s.lastMe.x
+      const dz = standing.z - s.lastMe.z
+      tmp.p.set(fig.position.x - standing.x, 0, fig.position.z - standing.z).normalize()
+      if (Math.hypot(dx, dz) < 0.25) towardHim = Math.max(0, dx * tmp.p.x + dz * tmp.p.z)
     }
     if (towardHim > 0.001) s.approachedAt = now
 
@@ -458,7 +466,7 @@ export function Ride() {
         addFear(APPROACH.fearJump)
       }
     } else s.closed = 0
-    s.lastMe = (s.lastMe ?? new Vector3()).copy(me)
+    s.lastMe = (s.lastMe ?? new Vector3()).set(standing.x, 0, standing.z)
 
     /** Puts him in your carriage, `gap` metres from you toward the far end (only while it's dark). */
     const placeInCarriage = (gap: number) => {
@@ -484,11 +492,29 @@ export function Ride() {
      * He paces the carriage, slowly, from one end to the other and back. If
      * you're standing in the aisle in his way he stops short, stares, and
      * turns back; if you're sitting (or off to the side) he walks right past.
+     * During a ritual he won't come near at all: he turns back short of you,
+     * and if he's already close he walks off to the far end.
      */
     const pace = () => {
       if (!fig || !inYourCarriage || game.panic || s.finalStrike) return
       const inAisle = !seat.active && Math.abs(me.x - CAR_X) < R.pace.aisleHalfWidth
       const ahead = (me.z - fig.position.z) * s.paceDir > 0
+      if (warded) {
+        const gap = Math.abs(me.z - fig.position.z)
+        if (gap < RIDE_RITUALS.keepAway && (ahead || !isWalking(fig))) {
+          // too close: away to the end behind him
+          s.paceDir = Math.sign(fig.position.z - me.z) || 1
+          s.paceRestUntil = 0
+          walkTo(fig, CAR_X, s.paceDir > 0 ? R.area.maxZ - 0.4 : R.area.minZ + 0.4, R.pace.speed)
+          return
+        }
+        if (isWalking(fig) && ahead && gap < RIDE_RITUALS.keepAway + 1) {
+          stopWalking(fig) // he stops short, stares, and turns back
+          s.paceRestUntil = now + R.pace.stareFor
+          s.paceDir = -s.paceDir
+          return
+        }
+      }
       if (isWalking(fig) && inAisle && ahead && Math.abs(me.z - fig.position.z) < APPROACH.holdOff + 0.4) {
         stopWalking(fig) // you're in the way: he stops and stares
         s.paceRestUntil = now + R.pace.stareFor
@@ -582,6 +608,7 @@ export function Ride() {
         if (finished) {
           s.ritual = 'done'
           s.ritualAt = now
+          s.wardUntil = now + RIDE_RITUALS.wardAfter
           game.setRitual({ phone: null })
           if (cfg.thought) game.setThought(cfg.thought)
           // every time she uses the phone, the battery drops; at 1% it warns her
@@ -851,7 +878,7 @@ export function Ride() {
     setTrainRun(s.beat === 'cut' ? 0 : speed.current)
     // Fear: rises with him near and in sight. Only the rituals ease it, briefly.
     const fearDist = fig?.visible ? (inYourCarriage ? near : dist) : Infinity
-    const approaching = now - s.approachedAt < 0.8
+    const approaching = !warded && now - s.approachedAt < 0.8
     if (s.beat !== 'exit' && stepFear(now, Math.min(dt, 0.1), fearDist, inView, calm, approaching) === 'panic' && fig && inYourCarriage) {
       s.strikes += 1
       if (s.strikes >= FEAR.strikes) {

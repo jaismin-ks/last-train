@@ -38,6 +38,8 @@ export const seat = { active: false, x: 0, z: 0, eye: 1.1, heading: 0, standX: 0
  * `face` (radians) if it's set. Clears itself on arrival.
  */
 export const autoWalk = { active: false, x: 0, z: 0, speed: 1.6, face: null as number | null }
+/** Where you're standing (without the camera shake): read it to tell whether you actually moved. */
+export const standing = { x: 0, z: 0 }
 const STRAFE_KEYS = ['KeyA', 'KeyD', 'ArrowLeft', 'ArrowRight']
 
 /**
@@ -202,6 +204,8 @@ export function FreeRoam({ area, collide, start, startHeading }: { area: Area; c
     if (advanced) bob.current += dt * WALK.bobSpeed * (running ? 1.6 : 1)
     const bobY = advanced ? Math.sin(bob.current) * WALK.bobAmount * (useGame.getState().reduceMotion ? 0 : 1) : 0
 
+    standing.x = pos.x
+    standing.z = pos.z
     camera.position.set(pos.x, area.floorY + eye.current + bobY, pos.z)
     const shake = cameraShake.amount + (panic ? FEAR.panicTremble : 0) // trembling in a panic
     if (shake > 0) {

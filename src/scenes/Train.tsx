@@ -119,12 +119,20 @@ export function Train() {
         .map((d) => {
           const node = scene.getObjectByName(d.name)
           if (!node) return null
+          // Where it sits shut, read once from the fresh model: the model is shared, so
+          // after boarding (doors still open) the ride's train would otherwise take open as shut
+          const closedZ: number = (node.userData.closedZ ??= node.position.z)
           // Blender -y (half A) becomes +z in three.js after the Y-up export
-          return { node, closedZ: node.position.z, dir: d.half === 'A' ? 1 : -1, platform: d.side === 'platform' }
+          return { node, closedZ, dir: d.half === 'A' ? 1 : -1, platform: d.side === 'platform' }
         })
         .filter((l): l is Leaf => l !== null),
     [scene],
   )
+  // A new train starts with its doors where the story has them (no sliding shut on arrival)
+  useEffect(() => {
+    const open = useGame.getState().trainDoorsOpen
+    for (const l of leaves) l.node.position.z = l.closedZ + (open && l.platform ? l.dir * markers.doorSlide : 0)
+  }, [leaves])
 
   // Door middles: average of the two halves' world positions (train at its stop)
   useMemo(() => {

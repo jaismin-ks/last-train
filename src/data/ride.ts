@@ -146,6 +146,10 @@ export const STATIONS = {
 export const RIDE_RITUALS = {
   offerAfter: 5, // seconds into a stretch (once he's around) before the ritual is offered
   ignoreAfter: 16, // offered but not done: the moment passes
+  /** While she's doing a ritual (and a little after) he keeps his distance: never nearer than this... */
+  keepAway: 4.5,
+  /** ...for this long after it's done. */
+  wardAfter: 6,
   batteryAtStart: 3, // phone battery (%) on the train; each phone ritual uses 1%, down to 1%
   text: {
     nudge: 'I should tell someone where I am.',

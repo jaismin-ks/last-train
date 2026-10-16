@@ -151,13 +151,13 @@ function TextHome({ typedText, send, jess, leaving, onDone }: { typedText: strin
 
   return (
     <div className={`${s.step} ${leaving ? s.leaving : ''}`}>
-      {jessIn && (
-        <div className={s.notification}>
-          <span className={s.notificationFrom}>Jess</span>
-          <span>{jess}</span>
-        </div>
-      )}
       <div className={s.chat}>
+        {jessIn && (
+          <div className={s.notification}>
+            <span className={s.notificationFrom}>Jess</span>
+            <span>{jess}</span>
+          </div>
+        )}
         <div className={s.time}>{c.earlierTime}</div>
         {c.earlier.map((m) => (
           <div key={m.text} className={`${s.bubble} ${m.from === 'mom' ? s.mom : s.me}`}>
