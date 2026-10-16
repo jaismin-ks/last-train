@@ -1,26 +1,42 @@
-/* Credits: a quiet, scrolling list on black */
-.page { position: fixed; inset: 0; overflow-y: auto; background: #000; color: var(--text); padding: 72px 24px 96px; animation: fade 1.2s ease both; }
-.inner { width: min(640px, 100%); margin: 0 auto; display: grid; gap: 44px; }
-.header { text-align: center; display: grid; gap: 8px; }
-.title { font-family: var(--font-display); font-weight: 400; font-size: clamp(44px, 7vw, 72px); line-height: 1; }
-.subtitle { font-family: var(--font-display); font-style: italic; color: var(--text-dim); font-size: 20px; }
-.by { margin-top: 10px; font-size: 11px; letter-spacing: 0.3em; text-transform: uppercase; color: var(--text-dim); }
+/* End credits: black, a centre line, the work on the left and the people on the right */
+.page {
+  position: fixed; inset: 0; overflow-y: auto; background: #000; color: var(--text);
+  padding: 0 24px; scrollbar-width: none; animation: fade 1.4s ease both;
+}
+.page::-webkit-scrollbar { display: none; }
+/* start below the bottom edge, like a film roll */
+.lead { height: 92vh; }
 
-.group { display: grid; gap: 14px; }
-.groupTitle { font-size: 11px; font-weight: 400; letter-spacing: 0.3em; text-transform: uppercase; color: var(--text-dim); border-bottom: 1px solid rgba(232, 236, 233, 0.12); padding-bottom: 10px; }
-.list { list-style: none; display: grid; gap: 12px; }
-.item { display: grid; gap: 3px; }
-.what { font-family: var(--font-display); font-size: 19px; line-height: 1.25; }
-.what a { color: inherit; text-decoration: none; border-bottom: 1px solid rgba(232, 236, 233, 0.25); }
-.what a:hover, .what a:focus-visible { border-bottom-color: var(--text); outline: none; }
-.meta { font-size: 12px; color: var(--text-dim); letter-spacing: 0.02em; line-height: 1.5; }
+.header { text-align: center; display: grid; gap: 10px; margin-bottom: 18vh; }
+.title { font-family: var(--font-display); font-weight: 400; font-size: clamp(44px, 7vw, 76px); line-height: 1; letter-spacing: 0.01em; }
+.subtitle { font-family: var(--font-display); font-style: italic; font-weight: 300; color: var(--text-dim); font-size: 21px; }
+.by { margin-top: 14px; font-family: var(--font-display); font-size: 17px; letter-spacing: 0.04em; }
 
-.note { font-size: 12px; color: var(--text-dim); text-align: center; line-height: 1.6; }
+.section { width: min(860px, 100%); margin: 0 auto 13vh; display: grid; gap: 14px; }
+.heading {
+  text-align: center; margin-bottom: 14px;
+  font-family: var(--font-ui); font-size: 11px; font-weight: 400; letter-spacing: 0.4em; text-transform: uppercase; color: var(--text-dim);
+}
+.row { display: grid; grid-template-columns: 1fr 1fr; column-gap: 28px; align-items: baseline; }
+.role { text-align: right; font-family: var(--font-display); font-style: italic; font-weight: 300; font-size: 16px; color: #b9c0bc; line-height: 1.35; }
+.role a { color: inherit; text-decoration: none; }
+.role a:hover, .role a:focus-visible { color: var(--text); text-decoration: underline; text-underline-offset: 3px; outline: none; }
+.name { text-align: left; font-family: var(--font-display); font-size: 18px; line-height: 1.35; display: grid; gap: 1px; }
+.meta { font-family: var(--font-ui); font-size: 10.5px; letter-spacing: 0.06em; color: var(--text-dim); }
+
+.footer { min-height: 70vh; display: grid; align-content: center; justify-items: center; gap: 34px; padding-bottom: 10vh; }
+.thanks { font-family: var(--font-display); font-style: italic; font-size: clamp(20px, 2.4vw, 28px); text-align: center; }
 .back {
-  justify-self: center; padding: 13px 40px; background: transparent; color: var(--text);
-  border: 1px solid rgba(232, 236, 233, 0.45); font-size: 12px; letter-spacing: 0.25em; text-transform: uppercase;
+  padding: 13px 40px; background: transparent; color: var(--text);
+  border: 1px solid rgba(232, 236, 233, 0.45); font-family: var(--font-ui); font-size: 12px; letter-spacing: 0.25em; text-transform: uppercase;
   transition: background 0.3s, color 0.3s;
 }
 .back:hover, .back:focus-visible { background: var(--text); color: #000; outline: none; }
+
+/* phones: stack each credit (centred) instead of splitting the line */
+@media (max-width: 560px) {
+  .row { grid-template-columns: 1fr; text-align: center; }
+  .role, .name { text-align: center; }
+}
 
 @keyframes fade { from { opacity: 0 } to { opacity: 1 } }

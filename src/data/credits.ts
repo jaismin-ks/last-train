@@ -6,6 +6,9 @@
  * Entries with `todo: true` still need their source filled in (they're hidden
  * on the page until then).
  */
+import { ENDING } from './ending'
+import { RESOURCES } from './captions'
+
 export type Credit = { what: string; who: string; where: string; license: string; url?: string; todo?: boolean }
 export type CreditGroup = { title: string; items: Credit[] }
 
@@ -107,7 +110,7 @@ export const CREDITS: CreditGroup[] = [
   {
     title: 'Type',
     items: [
-      { what: 'Instrument Serif', who: 'Rodrigo Fuenzalida, Jordan Egstad', where: 'Google Fonts', license: 'SIL Open Font License' },
+      { what: 'Newsreader', who: 'Production Type', where: 'Google Fonts', license: 'SIL Open Font License' },
       { what: 'IBM Plex Mono', who: 'IBM, Mike Abbink, Bold Monday', where: 'Google Fonts', license: 'SIL Open Font License' },
     ],
   },
@@ -121,5 +124,10 @@ export const CREDITS: CreditGroup[] = [
   },
 ]
 
-/** Statistics on the end screens are credited where they appear. */
-export const CREDITS_NOTE = 'Statistics: Statistics Canada, WomanACT / Angus Reid (sources shown with each one).'
+/** References: the research behind the end screens, and the support organisations. */
+export const REFERENCES: Credit[] = [
+  ...ENDING.screens
+    .filter((sc) => sc.source)
+    .map((sc) => ({ what: sc.lines[0], who: sc.source!, where: '', license: '', url: sc.url })),
+  ...RESOURCES.map((r) => ({ what: r.name, who: r.contact, where: 'Support line', license: '' })),
+]
