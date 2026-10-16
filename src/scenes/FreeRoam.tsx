@@ -9,22 +9,32 @@ import { useGame } from '../store'
 /** Free walking area: the platform (three.js coords). */
 export type Area = { minX: number; maxX: number; minZ: number; maxZ: number; floorY: number }
 
-const MOUSE_SENSITIVITY = 0.0022 // radians per pixel
+/**
+ * Mouse look, same feel as the street (the cursor is never locked): the head
+ * turns toward the cursor, and holding it near the left/right edge keeps
+ * turning you, so you can still look all the way round.
+ */
+const LOOK = {
+  edgeStart: 0.6, // how far from the middle (0–1) the cursor starts turning you
+  turnSpeed: 1.8, // radians per second at the very edge
+  maxPitchDeg: 35, // looking up / down (higher than the street: CCTV, ceiling)
+}
 const WALL_GAP = 0.45 // metres kept between you and walls
 const STRAFE = ['KeyA', 'KeyD', 'ArrowLeft', 'ArrowRight']
 
 /**
- * First-person free walking: the mouse turns you all the way round (click to
- * lock the pointer), W/S walk where you're looking, A/D step sideways, Shift runs.
+ * First-person free walking: the mouse looks around (see LOOK), W/S walk where
+ * you're looking, A/D step sideways, Shift runs.
  * You stay inside `area` and can't walk through walls (`collide` meshes).
  */
 export function FreeRoam({ area, collide, start, startHeading }: { area: Area; collide: Object3D; start: Vector3; startHeading: number }) {
   const camera = useThree((s) => s.camera)
-  const gl = useThree((s) => s.gl)
   const input = usePlayerInput(true)
   const setStamina = useGame((s) => s.setStamina)
 
-  const yaw = useRef(startHeading)
+  const body = useRef(startHeading) // which way you're turned
+  const head = useRef(0) // head turn on top of that, toward the cursor
+  const yaw = useRef(startHeading) // where you're looking: body + head
   const pitch = useRef(0)
   const pos = useMemo(() => new Vector3(start.x, area.floorY, start.z), [start, area])
   const strafe = useRef({ left: false, right: false })
@@ -35,15 +45,8 @@ export function FreeRoam({ area, collide, start, startHeading }: { area: Area; c
   const ray = useMemo(() => new Raycaster(), [])
   const tmp = useMemo(() => ({ move: new Vector3(), from: new Vector3(), look: new Vector3() }), [])
 
-  // Mouse look (pointer lock gives unlimited turning; click the view to lock)
+  // A/D step sideways
   useEffect(() => {
-    const el = gl.domElement
-    const lock = () => el.requestPointerLock?.()
-    const onMove = (e: MouseEvent) => {
-      if (document.pointerLockElement !== el) return // menu open or mouse released
-      yaw.current -= e.movementX * MOUSE_SENSITIVITY
-      pitch.current = MathUtils.clamp(pitch.current - e.movementY * MOUSE_SENSITIVITY, -1.2, 1.2)
-    }
     const key = (down: boolean) => (e: KeyboardEvent) => {
       if (e.code === 'KeyA' || e.code === 'ArrowLeft') strafe.current.left = down
       if (e.code === 'KeyD' || e.code === 'ArrowRight') strafe.current.right = down
@@ -51,20 +54,15 @@ export function FreeRoam({ area, collide, start, startHeading }: { area: Area; c
     }
     const kd = key(true)
     const ku = key(false)
-    el.addEventListener('click', lock)
-    window.addEventListener('mousemove', onMove)
     window.addEventListener('keydown', kd)
     window.addEventListener('keyup', ku)
     return () => {
-      el.removeEventListener('click', lock)
-      window.removeEventListener('mousemove', onMove)
       window.removeEventListener('keydown', kd)
       window.removeEventListener('keyup', ku)
-      if (document.pointerLockElement === el) document.exitPointerLock()
       setFootsteps(0)
       setHeartbeat(false)
     }
-  }, [gl])
+  }, [])
 
   /** True if a wall is within WALL_GAP + step of `pos` in direction `dir`. */
   const blocked = (dir: Vector3, step: number) => {
@@ -79,7 +77,8 @@ export function FreeRoam({ area, collide, start, startHeading }: { area: Area; c
     const i = input.current
     const fwd = (i.forward ? 1 : 0) - (i.back ? 1 : 0)
     const side = (strafe.current.right ? 1 : 0) - (strafe.current.left ? 1 : 0)
-    const moving = fwd !== 0 || side !== 0
+    const locked = useGame.getState().inputLocked
+    const moving = !locked && (fwd !== 0 || side !== 0)
 
     // Running: same energy rules as on the route
     if (exhausted.current && stamina.current >= RUN.minToStart) exhausted.current = false
@@ -93,7 +92,19 @@ export function FreeRoam({ area, collide, start, startHeading }: { area: Area; c
       if (sinceRun.current > RUN.refillDelay) stamina.current = Math.min(1, stamina.current + RUN.refillPerSecond * dt)
     }
     setStamina(stamina.current, running)
-    setHeartbeat(running)
+    setHeartbeat(running || useGame.getState().fear)
+
+    // Look: head toward the cursor; near the edges the body keeps turning
+    if (!locked) {
+      const x = i.lookX
+      const edge = MathUtils.smoothstep(Math.abs(x), LOOK.edgeStart, 1) * Math.sign(x)
+      body.current -= edge * LOOK.turnSpeed * dt
+      const targetHead = -x * MathUtils.degToRad(WALK.maxYawDeg)
+      head.current = MathUtils.damp(head.current, targetHead, WALK.lookSmoothing, dt)
+      const targetPitch = i.lookY * MathUtils.degToRad(LOOK.maxPitchDeg)
+      pitch.current = MathUtils.damp(pitch.current, targetPitch, WALK.lookSmoothing, dt)
+    }
+    yaw.current = body.current + head.current
 
     let advanced = false
     if (moving) {

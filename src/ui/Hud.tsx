@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Howler } from 'howler'
 import { useGame, type Phase } from '../store'
 import { setAudioPaused, setFootsteps } from '../audio/sounds'
@@ -26,7 +26,7 @@ export function AudioSettings() {
 /**
  * Corner controls that stay on screen for the whole game: sound on/off and
  * pause. Also owns the keys (Esc / P pause, M mute) and pauses by itself when
- * the tab is hidden or the mouse is released on the platform.
+ * the tab is hidden.
  */
 export function Hud() {
   const phase = useGame((st) => st.phase)
@@ -35,7 +35,6 @@ export function Hud() {
   const setPaused = useGame((st) => st.setPaused)
   const setMuted = useGame((st) => st.setMuted)
   const [idle, setIdle] = useState(false)
-  const unlockedAt = useRef(0)
   const inGame = IN_GAME.includes(phase)
 
   // Keys
@@ -44,34 +43,20 @@ export function Hud() {
       const st = useGame.getState()
       if (!IN_GAME.includes(st.phase) || e.repeat) return
       if (e.code === 'KeyM') st.setMuted(!st.muted)
-      if (e.code === 'Escape' || e.code === 'KeyP') {
-        // Esc that just released the mouse on the platform already opened the menu
-        if (e.code === 'Escape' && performance.now() - unlockedAt.current < 300) return
-        st.setPaused(!st.paused)
-      }
+      if (e.code === 'Escape' || e.code === 'KeyP') st.setPaused(!st.paused)
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [])
 
-  // Pause by itself when the player leaves: tab hidden, or mouse released while looking around
+  // Pause by itself when the player leaves the tab
   useEffect(() => {
-    const pause = () => {
+    const onVisibility = () => {
       const st = useGame.getState()
-      if (IN_GAME.includes(st.phase) && !st.paused) st.setPaused(true)
-    }
-    const onVisibility = () => document.hidden && pause()
-    const onLockChange = () => {
-      if (document.pointerLockElement || useGame.getState().phase !== 'platform') return
-      unlockedAt.current = performance.now()
-      pause()
+      if (document.hidden && IN_GAME.includes(st.phase) && !st.paused) st.setPaused(true)
     }
     document.addEventListener('visibilitychange', onVisibility)
-    document.addEventListener('pointerlockchange', onLockChange)
-    return () => {
-      document.removeEventListener('visibilitychange', onVisibility)
-      document.removeEventListener('pointerlockchange', onLockChange)
-    }
+    return () => document.removeEventListener('visibilitychange', onVisibility)
   }, [])
 
   // Freeze every sound while paused

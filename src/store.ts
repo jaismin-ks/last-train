@@ -28,6 +28,9 @@ type GameState = {
   trainDoorsOpen: boolean // platform-side train doors
   platformLightsOn: boolean // station lights (go dark later in the story)
   running: boolean
+  trainState: 'hidden' | 'arriving' | 'stopped' // the train on the platform
+  inputLocked: boolean // cutscene moments: walking and looking are off
+  fear: boolean // something nearby is frightening (heartbeat)
   muted: boolean // sound off (M or the speaker button), remembered between visits
   volume: number // 0–1 master volume
   reduceMotion: boolean // no head bob or head tilt
@@ -43,6 +46,9 @@ type GameState = {
   setStamina: (stamina: number, running: boolean) => void
   setTrainDoorsOpen: (open: boolean) => void
   setPlatformLightsOn: (on: boolean) => void
+  setTrainState: (state: GameState['trainState']) => void
+  setInputLocked: (locked: boolean) => void
+  setFear: (fear: boolean) => void
   setMuted: (muted: boolean) => void
   setVolume: (volume: number) => void
   setReduceMotion: (on: boolean) => void
@@ -97,6 +103,9 @@ export const useGame = create<GameState>((set, get) => {
   trainDoorsOpen: false,
   platformLightsOn: true,
   running: false,
+  trainState: 'hidden',
+  inputLocked: false,
+  fear: false,
   ...settings,
   setPhase: (phase) => set({ phase }),
   setBattery: (battery) => set({ battery: Math.max(0, Math.min(100, battery)) }),
@@ -110,6 +119,9 @@ export const useGame = create<GameState>((set, get) => {
   setStamina: (stamina, running) => set({ stamina, running }),
   setTrainDoorsOpen: (trainDoorsOpen) => set({ trainDoorsOpen }),
   setPlatformLightsOn: (platformLightsOn) => set({ platformLightsOn }),
+  setTrainState: (trainState) => set({ trainState }),
+  setInputLocked: (inputLocked) => set({ inputLocked }),
+  setFear: (fear) => set({ fear }),
   setMuted: (muted) => saveAfter({ muted }),
   setVolume: (volume) => saveAfter({ volume: Math.max(0, Math.min(1, volume)), muted: volume > 0 ? false : get().muted }),
   setReduceMotion: (reduceMotion) => saveAfter({ reduceMotion }),

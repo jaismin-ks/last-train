@@ -29,6 +29,17 @@ for (const name of ['KHR_materials_specular', 'KHR_materials_ior', 'KHR_material
   doc.getRoot().listExtensionsUsed().find((e) => e.extensionName === name)?.dispose()
 }
 
+// Opaque materials ignore alpha, but some textures still carry a (mostly zero)
+// alpha channel. WebP throws away the colour under fully transparent pixels, so
+// those textures came out blank. Strip alpha when only opaque materials use it.
+for (const tex of doc.getRoot().listTextures()) {
+  const users = doc.getRoot().listMaterials().filter((m) => m.getBaseColorTexture() === tex)
+  if (!users.length || users.some((m) => m.getAlphaMode() !== 'OPAQUE')) continue
+  const img = tex.getImage()
+  if (!img || !(await sharp(img).metadata()).hasAlpha) continue
+  tex.setImage(new Uint8Array(await sharp(img).removeAlpha().png().toBuffer())).setMimeType('image/png')
+}
+
 await doc.transform(
   dedup(),
   // no instance(): GPU instancing came out with wrong rotations and culling

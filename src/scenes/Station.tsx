@@ -14,6 +14,8 @@ import { EscalatorLights } from './EscalatorLights'
 import { Train } from './Train'
 import { disposeTree } from '../systems/dispose'
 import { PlatformLights } from './PlatformLights'
+import { PlatformStory } from './PlatformStory'
+import { CCTV } from './CCTV'
 import { StreetEffects } from './StreetEffects'
 
 const STATION_MODEL = '/assets/models/station.glb'
@@ -48,7 +50,13 @@ export function Station() {
   const camera = useThree((s) => s.camera) as PerspectiveCamera
   const setBlackout = useGame((s) => s.setBlackout)
   const start = useRef<number | null>(null)
-  const [free, setFree] = useState<{ heading: number; at: Vector3 } | null>(null)
+  const faded = useRef(false)
+  // Dev only: ?phase=platform&skip=1 starts on the platform, skipping the walk down
+  const [free, setFree] = useState<{ heading: number; at: Vector3 } | null>(() => {
+    if (!import.meta.env.DEV || !new URLSearchParams(location.search).has('skip')) return null
+    const [x, y, z] = FULL_ROUTE[PLATFORM_START]
+    return { heading: 0, at: new Vector3(x, y, z) }
+  })
   // On the platform for good: drop the hall, escalators and corridors from memory
   useEffect(() => {
     if (!free) return
@@ -72,7 +80,8 @@ export function Station() {
     if (!free) return
     const { setCaption } = useGame.getState()
     setCaption(CAPTIONS.station.onPlatform)
-    const t = setTimeout(() => setCaption(null), 7000)
+    // the controls line goes after a while; the objective stays until the story moves on
+    const t = setTimeout(() => setCaption({ text: CAPTIONS.station.onPlatform.text }), 7000)
     return () => clearTimeout(t)
   }, [free])
   const gate = useMemo(() => {
@@ -125,7 +134,9 @@ export function Station() {
     // Fade in from black
     if (start.current === null) start.current = clock.elapsedTime
     const fade = Math.min(1, (clock.elapsedTime - start.current) / SCENE_FADE.in)
-    setBlackout(1 - fade * fade * (3 - 2 * fade)) // smooth fade in from black
+    // smooth fade in from black (then leave the overlay alone for later fades)
+    if (fade < 1 || !faded.current) setBlackout(1 - fade * fade * (3 - 2 * fade))
+    if (fade >= 1) faded.current = true
     // Escalator hum: louder the closer you are to a running escalator
     const d = Math.min(...HUM_SOURCES.map((p) => p.distanceTo(camera.position)))
     const k = Math.max(0, 1 - d / HUM.reach)
@@ -156,8 +167,10 @@ export function Station() {
       {!free && <StationLights route={ROUTE} />}
       {!free && <EscalatorLights />}
       <PlatformLights />
-      {/* Parked for now; arrival comes later */}
+      <CCTV />
+      {/* Hidden until the story brings it in */}
       <Train />
+      {free && <PlatformStory />}
       <primitive object={scene} />
       {!free && (
         <Player

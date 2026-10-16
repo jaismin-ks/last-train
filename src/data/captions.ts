@@ -13,7 +13,7 @@ export const CAPTIONS = {
   },
   station: {
     findPlatform: { text: 'Find your platform', sub: 'Hold W to walk  ·  Shift to run  ·  S to step back' },
-    onPlatform: { text: 'Wait for the train', sub: 'Click to look around  ·  WASD to move  ·  Shift to run' },
+    onPlatform: { text: 'Wait for the train', sub: 'WASD to move  ·  Mouse to look (edges to turn)  ·  Shift to run' },
   },
   street: {
     // shown once when you land, like a film chapter heading

@@ -7,7 +7,6 @@ import s from './hud.module.css'
 /** Leaves the game for the resources screen, cleanly. */
 export function goToResources() {
   const st = useGame.getState()
-  if (document.pointerLockElement) document.exitPointerLock()
   stopAllAudio()
   st.setPaused(false)
   st.setBlackout(0)
@@ -38,18 +37,7 @@ export function PauseMenu() {
 
   if (!paused || !IN_GAME.includes(phase)) return null
 
-  const resume = () => {
-    setPaused(false)
-    // On the platform, take the mouse back straight away (needs this click)
-    if (phase === 'platform') {
-      const canvas = document.querySelector('canvas')
-      try {
-        void (canvas?.requestPointerLock() as unknown as Promise<void> | undefined)?.catch?.(() => {})
-      } catch {
-        // browser refused (too soon after Esc): clicking the view locks it
-      }
-    }
-  }
+  const resume = () => setPaused(false)
 
   return (
     <div role="dialog" aria-modal aria-label="Paused" className={s.overlay}>
@@ -118,7 +106,7 @@ export function PauseMenu() {
             <kbd>A / D</kbd>
             <span>step sideways (platform)</span>
             <kbd>Mouse</kbd>
-            <span>look around (click to grab the mouse)</span>
+            <span>look around (hold near the edge to keep turning)</span>
             <kbd>Shift</kbd>
             <span>run</span>
             <kbd>M</kbd>

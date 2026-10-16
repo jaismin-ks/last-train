@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react'
+import { MathUtils } from 'three'
 
 export type PlayerInput = {
   forward: boolean
@@ -33,6 +34,12 @@ export function usePlayerInput(enabled: boolean) {
       i.lookX = (e.clientX / window.innerWidth) * 2 - 1
       i.lookY = -((e.clientY / window.innerHeight) * 2 - 1)
     }
+    // Cursor left the window: ease the look back toward the middle so you
+    // don't keep spinning on the platform
+    const onLeave = (e: MouseEvent) => {
+      if (e.relatedTarget) return
+      i.lookX = MathUtils.clamp(i.lookX, -0.55, 0.55)
+    }
     // Stop walking if the window loses focus mid-step
     const onBlur = () => {
       i.forward = false
@@ -42,11 +49,13 @@ export function usePlayerInput(enabled: boolean) {
     window.addEventListener('keydown', onDown)
     window.addEventListener('keyup', onUp)
     window.addEventListener('mousemove', onMove)
+    document.addEventListener('mouseout', onLeave)
     window.addEventListener('blur', onBlur)
     return () => {
       window.removeEventListener('keydown', onDown)
       window.removeEventListener('keyup', onUp)
       window.removeEventListener('mousemove', onMove)
+      document.removeEventListener('mouseout', onLeave)
       window.removeEventListener('blur', onBlur)
     }
   }, [enabled])
