@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useGame } from '../store'
+import { isTouch } from '../systems/device'
 
 /**
  * Small interaction hint above the caption: a key chip and a quiet word,
@@ -14,9 +15,18 @@ export function Prompt() {
   }, [prompt])
   const [key, label] = (shown ?? '').includes('|') ? (shown ?? '').split('|') : ['', shown ?? '']
 
+  // on a phone the hint is a button: tapping it presses its key
+  const tap = () => {
+    if (!key) return
+    const code = `Key${key.toUpperCase()}`
+    window.dispatchEvent(new KeyboardEvent('keydown', { code, key }))
+    window.dispatchEvent(new KeyboardEvent('keyup', { code, key }))
+  }
+
   return (
     <div
       aria-live="polite"
+      onPointerDown={isTouch && prompt && key ? tap : undefined}
       style={{
         position: 'fixed',
         left: 0,
@@ -26,7 +36,7 @@ export function Prompt() {
         justifyContent: 'center',
         alignItems: 'center',
         gap: 10,
-        pointerEvents: 'none',
+        pointerEvents: isTouch && prompt && key ? 'auto' : 'none',
         zIndex: 5,
         color: 'rgba(230, 240, 235, 0.72)',
         fontFamily: 'var(--font-ui)',

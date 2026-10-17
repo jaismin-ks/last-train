@@ -1,8 +1,7 @@
 import { useGame } from '../store'
 import s from './screens.module.css'
 
-/** Phones and tablets: no keyboard or mouse, so say so up front (they can still try). */
-const touchOnly = typeof matchMedia !== 'undefined' && matchMedia('(hover: none) and (pointer: coarse)').matches
+import { isTouch } from '../systems/device'
 
 export function ContentWarning() {
   const setPhase = useGame((st) => st.setPhase)
@@ -15,9 +14,10 @@ export function ContentWarning() {
       <p className={s.small}>
         If you need support, resources are listed at the end and available at any time from the menu.
       </p>
-      {touchOnly && (
+      {isTouch && (
         <p className={s.small}>
-          Last Train is made for a computer with a keyboard and mouse. On a phone or tablet it won’t play properly.
+          On a phone: play it sideways. Left thumb to walk (push all the way to run), drag on the right to look, and tap the
+          prompts on screen.
         </p>
       )}
       <button className={s.primary} onClick={() => setPhase('title')}>

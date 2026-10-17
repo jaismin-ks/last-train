@@ -3,6 +3,11 @@
  * `text` is the instruction, `sub` an optional smaller line (controls).
  * Edit the wording here.
  */
+import { isTouch } from '../systems/device'
+
+const WALK_HINT = isTouch ? 'Push the left stick to walk  ·  all the way to run' : 'Hold W to keep walking  ·  Shift to run'
+const ROAM_HINT = isTouch ? 'Left stick to move  ·  drag on the right to look' : 'WASD to move  ·  Mouse to look'
+
 export const CAPTIONS = {
   phone: {
     unlock: { text: 'Swipe up to unlock your phone' },
@@ -12,8 +17,8 @@ export const CAPTIONS = {
     sendReply: { text: 'Send it', sub: 'Tap the send button' },
   },
   station: {
-    findPlatform: { text: 'Get to the platform', sub: 'Hold W to keep walking  ·  Shift to run' },
-    onPlatform: { text: 'Wait for the train', sub: 'WASD to move  ·  Mouse to look' },
+    findPlatform: { text: 'Get to the platform', sub: WALK_HINT },
+    onPlatform: { text: 'Wait for the train', sub: ROAM_HINT },
     // once the gate is down behind you: why the station is empty
     closedAnnouncement: {
       text: '"This station is now closed. The last southbound train will arrive shortly."',
@@ -23,7 +28,7 @@ export const CAPTIONS = {
   street: {
     // shown once when you land, like a film chapter heading
     location: { time: '11:58 PM', place: 'Delmont St. W' }, // made up, Toronto-style
-    findSubway: { text: 'Get to the station before it closes', sub: 'Hold W to keep walking  ·  Shift to run' },
+    findSubway: { text: 'Get to the station before it closes', sub: WALK_HINT },
   },
 }
 

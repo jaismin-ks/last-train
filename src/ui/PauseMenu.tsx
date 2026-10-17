@@ -3,6 +3,7 @@ import { useGame } from '../store'
 import { stopAllAudio } from '../audio/sounds'
 import { IN_GAME } from './Hud'
 import s from './hud.module.css'
+import { isTouch } from '../systems/device'
 
 /** Leaves the game for the resources screen, cleanly. */
 export function goToResources() {
@@ -107,20 +108,31 @@ export function PauseMenu() {
 
         <div className={s.settings}>
           <span className={s.label}>Controls</span>
-          <div className={s.controls}>
-            <kbd>W / S</kbd>
-            <span>walk forward / back</span>
-            <kbd>A / D</kbd>
-            <span>step sideways (platform and train)</span>
-            <kbd>Mouse</kbd>
-            <span>look around (to the edge of the screen to turn)</span>
-            <kbd>Shift</kbd>
-            <span>run</span>
-            <kbd>M</kbd>
-            <span>sound on / off</span>
-            <kbd>Esc</kbd>
-            <span>pause / resume</span>
-          </div>
+          {isTouch ? (
+            <div className={s.controls}>
+              <kbd>Left thumb</kbd>
+              <span>walk (push all the way to run, sideways to step)</span>
+              <kbd>Right side</kbd>
+              <span>drag to look around</span>
+              <kbd>Prompts</kbd>
+              <span>tap them (sit, text, call…)</span>
+            </div>
+          ) : (
+            <div className={s.controls}>
+              <kbd>W / S</kbd>
+              <span>walk forward / back</span>
+              <kbd>A / D</kbd>
+              <span>step sideways (platform and train)</span>
+              <kbd>Mouse</kbd>
+              <span>look around (to the edge of the screen to turn)</span>
+              <kbd>Shift</kbd>
+              <span>run</span>
+              <kbd>M</kbd>
+              <span>sound on / off</span>
+              <kbd>Esc</kbd>
+              <span>pause / resume</span>
+            </div>
+          )}
         </div>
       </div>
     </div>

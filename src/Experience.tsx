@@ -17,6 +17,7 @@ import { FearVignette } from './ui/FearVignette'
 import { RitualOverlay } from './ui/RitualOverlay'
 import { SoundCaption } from './ui/SoundCaption'
 import { StaminaBar } from './ui/StaminaBar'
+import { TouchControls } from './ui/TouchControls'
 import { useEffect, useLayoutEffect, useRef } from 'react'
 import type { RootState } from '@react-three/fiber'
 import { Station } from './scenes/Station'
@@ -102,6 +103,7 @@ export function Experience() {
     <Missed />
     <StaminaBar />
     <Prompt />
+    <TouchControls />
     <Fader />
     </>
   )
