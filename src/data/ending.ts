@@ -37,7 +37,7 @@ export const ENDING = {
     ambiguous: {
       typed: 'just got home ❤️',
       send: true,
-      jess: 'are you okay? do you want me to pick you up?',
+      jess: 'dinner’s ready 🍝', // she's home: Jess (her roommate) made dinner, like she said she would
       opening: [['Maya got home that night.'], ['Many don’t.']],
     },
   } as Record<'followed' | 'ambiguous', { typed: string; send: boolean; jess: string; opening: string[][] }>,
