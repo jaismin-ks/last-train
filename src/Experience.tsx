@@ -25,10 +25,12 @@ import { Ride } from './scenes/Ride'
 
 /**
  * Rendering resolution (device pixel ratio). High-DPI screens cost 4x the pixels
- * at 2x, so it's capped; and if the frame rate drops, it steps down (to 1, then
- * 0.75) until the game runs smoothly, and back up when there's headroom.
+ * at 2x, so the 3D scenes are capped at 1.5 and step down to the screen's own
+ * size (1) if the frame rate drops, back up when there's headroom. Never below 1
+ * (blurry). The phone scene is cheap and all text, so it always gets full sharpness.
  */
-const DPR = { max: Math.min(typeof devicePixelRatio === 'number' ? devicePixelRatio : 1, 1.5), min: 0.75, step: 0.25 }
+const SCREEN_DPR = typeof devicePixelRatio === 'number' ? devicePixelRatio : 1
+const DPR = { max: Math.min(SCREEN_DPR, 1.5), min: Math.min(SCREEN_DPR, 1), step: 0.25, phone: Math.min(SCREEN_DPR, 2) }
 
 /** The phone scene happens far below the street, hidden in the black fog. */
 const PHONE_RIG_Y = -300
@@ -69,13 +71,14 @@ export function Experience() {
       onCreated={(state) => {
         three.current = state
         if (import.meta.env.DEV) (window as unknown as { __three: typeof state }).__three = state // dev: lets tests inspect the camera
-      }} dpr={dpr} gl={{ powerPreference: 'high-performance' }}>
-      <PerformanceMonitor
-        flipflops={4}
-        onDecline={() => setDpr((d) => Math.max(DPR.min, d - DPR.step))}
-        onIncline={() => setDpr((d) => Math.min(DPR.max, d + DPR.step))}
-        onFallback={() => setDpr(DPR.min)}
-      />
+      }} dpr={showPhone ? DPR.phone : dpr} gl={{ powerPreference: 'high-performance' }}>
+      {/* judged only in the walking scenes (the phone scene's frames dip while the street loads behind it) */}
+      {!showPhone && (
+        <PerformanceMonitor
+          onDecline={() => setDpr((d) => Math.max(DPR.min, d - DPR.step))}
+          onIncline={() => setDpr((d) => Math.min(DPR.max, d + DPR.step))}
+        />
+      )}
       <color attach="background" args={['#000']} />
       <Suspense fallback={null}>
         {showPhone && (
