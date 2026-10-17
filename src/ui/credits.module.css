@@ -27,7 +27,6 @@
 .meta { font-family: var(--font-ui); font-size: 10.5px; letter-spacing: 0.06em; color: var(--text-dim); }
 
 .footer { min-height: 70vh; display: grid; align-content: center; justify-items: center; gap: 34px; padding-bottom: 10vh; }
-.thanks { font-family: var(--font-display); font-style: italic; font-size: clamp(20px, 2.4vw, 28px); text-align: center; }
 .back {
   padding: 13px 40px; background: transparent; color: var(--text);
   border: 1px solid rgba(232, 236, 233, 0.45); font-family: var(--font-ui); font-size: 12px; letter-spacing: 0.25em; text-transform: uppercase;

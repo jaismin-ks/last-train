@@ -22,7 +22,7 @@ export const CAPTIONS = {
   },
   street: {
     // shown once when you land, like a film chapter heading
-    location: { time: '11:58 PM', place: '25 St.' },
+    location: { time: '11:58 PM', place: 'Delmont St. W' }, // made up, Toronto-style
     findSubway: { text: 'Get to the station before it closes', sub: 'Hold W to keep walking  ·  Shift to run' },
   },
 }
@@ -41,17 +41,58 @@ export const THOUGHTS = {
   gateClosed: 'They’ve closed the gates behind me.',
 }
 
-/** Support resources, shown in the pause menu. Verify numbers before launch. */
-/** Support lines shown on the resources screen (tel: makes them tappable on phones). */
-export const RESOURCES = [
-  { name: "Assaulted Women's Helpline (Ontario)", contact: '1-866-863-0511', tel: '18668630511', note: '24/7, free, confidential', url: 'https://www.awhl.org/' },
-  { name: 'Toronto Rape Crisis Centre', contact: '416-597-8808', tel: '4165978808', note: '24-hour crisis line', url: 'https://trccmwar.ca/' },
-  { name: 'Kids Help Phone', contact: '1-800-668-6868 · text 686868', tel: '18006686868', note: 'for young people, 24/7', url: 'https://kidshelpphone.ca/' },
+/**
+ * Support lines on the resources screen, grouped. `href` makes them tappable on
+ * phones (tel: / sms:). Numbers checked against each service's own site, Oct 2026.
+ */
+export type Resource = { name: string; contact: string; href?: string; note: string; url: string }
+export const RESOURCE_GROUPS: { title: string; items: Resource[] }[] = [
+  {
+    title: 'Toronto & Ontario',
+    items: [
+      { name: "Assaulted Women's Helpline", contact: '1-866-863-0511', href: 'tel:18668630511', note: '24/7, free, confidential, across Ontario', url: 'https://www.awhl.org/' },
+      { name: 'Toronto Rape Crisis Centre', contact: '416-597-8808', href: 'tel:4165978808', note: '24-hour crisis line', url: 'https://trccmwar.ca/' },
+    ],
+  },
+  {
+    title: 'On the TTC',
+    items: [
+      { name: 'SafeTTC', contact: 'text 647-496-1940 · SafeTTC app', href: 'sms:16474961940', note: 'report harassment straight to Transit Control', url: 'https://www.ttc.ca/riding-the-ttc/safety-and-security/safe-ttc-app' },
+      { name: 'Designated Waiting Areas', contact: 'on every subway platform', note: 'an intercom to TTC staff while you wait', url: 'https://www.ttc.ca/riding-the-ttc/safety-and-security/Designated-Waiting-Area-DWA' },
+    ],
+  },
+  {
+    title: 'Across Canada',
+    items: [
+      { name: '9-8-8 Suicide Crisis Helpline', contact: 'call or text 988', href: 'tel:988', note: '24/7, free, English and French', url: 'https://988.ca/' },
+      { name: 'Kids Help Phone', contact: '1-800-668-6868 · text 686868', href: 'tel:18006686868', note: 'for young people, 24/7', url: 'https://kidshelpphone.ca/' },
+      { name: 'Hope for Wellness Help Line', contact: '1-855-242-3310', href: 'tel:18552423310', note: 'for Indigenous peoples, 24/7, also online chat', url: 'https://www.hopeforwellness.ca/' },
+    ],
+  },
+  {
+    title: 'Outside Canada',
+    items: [
+      { name: 'Find A Helpline', contact: 'findahelpline.com', href: 'https://findahelpline.com/', note: 'free, confidential support lines in your country', url: 'https://findahelpline.com/' },
+    ],
+  },
 ]
+export const RESOURCES = RESOURCE_GROUPS.flatMap((g) => g.items)
 
 /** Copy for the resources screen (reached from the content warning, the pause menu, or the end). */
 export const RESOURCES_SCREEN = {
   title: "You're not alone.",
   lede: 'If anything here stayed with you, or felt familiar, these people are there to listen.',
-  emergency: 'If you are in danger right now, call 911.',
+  emergency: 'If you are in danger right now, call 911, or your local emergency number.',
+}
+
+/**
+ * The red button at the end of the resources screen: one press per person,
+ * counted for everyone. Pressed, it shows how many people have, and the
+ * `after` line appears under it.
+ */
+export const SUPPORT = {
+  ask: 'If you or someone you know has experienced something like this, press to show your support.',
+  button: 'I stand with you',
+  pressed: (n: number) => `${n.toLocaleString()} ${n === 1 ? 'person' : 'people'}`,
+  after: 'We stand together against harassment and violence.',
 }

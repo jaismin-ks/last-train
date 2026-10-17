@@ -4,14 +4,16 @@
  * tunnel (and each station) streams past.
  *
  * Each stretch has one ritual (random order each playthrough: text a friend,
- * fake a call, keys between your fingers). Each station the doors open and
- * you choose: get off (he follows — its own ending) or stay on.
+ * fake a call, keys between your fingers).
  *   stretch 1  he's in the next carriage, seen through the end-door window
- *   station 1  doors open; stay, and he's in your carriage when they close
- *   stretch 2  emergency stop in the tunnel; he comes closer on each flicker
- *   station 2  doors open again
+ *   station 1  doors open; get off (he follows, its own ending) or stay on,
+ *              and he's in your carriage when they close
+ *   stretch 2  emergency stop in the tunnel (an alarm at the next station);
+ *              he comes closer on each flicker
+ *   station 2  Ashdale, where the alarm was: the train crawls through without
+ *              stopping, police lights on an empty platform. Nobody is shown.
  *   stretch 3  he's close; the lights keep failing
- *   station 3  your stop: you step off without looking back (ambiguous ending)
+ *   station 3  your stop: you step off, the train pulls away with him on it
  */
 export const RIDE = {
   /** Walkable inside of the middle carriage (car 1). */
@@ -21,11 +23,13 @@ export const RIDE = {
 
   /** Seconds to reach full speed, and seconds at full speed before he shows. */
   accelerate: 9,
-  cruiseBeforeFigure: 10,
+  cruiseBeforeFigure: 6,
   /** He stands in the next carriage (car 0), facing you through the end door. */
   nextCarAt: { x: -73.25, z: 71.5 },
+  /** A ritual on the first stretch: he backs this far away from the end door, into the next carriage. */
+  nextCarBackOff: 3.5,
   /** If you never look his way, he's revealed (cough) after this long. */
-  figureLookTimeout: 14,
+  figureLookTimeout: 10,
   /** Seconds after the ritual (or after it's offered and ignored) before the next thing happens. */
   afterRitual: 6,
   brakeTime: 2.4, // seconds from full speed to stopped
@@ -40,13 +44,19 @@ export const RIDE = {
   heldStep: 3,
   heldClosest: 3.4, // never closer than this on his own
   /** Once he's in your carriage he paces it end to end, slowly. */
-  pace: { speed: 0.7, restAtEnd: 2.5, stareFor: 3.5, aisleHalfWidth: 0.6 },
+  pace: { speed: 0.7, restAtEnd: 2.5, stareFor: 3.5, aisleHalfWidth: 0.6, retreat: 0.9 }, // retreat: backing off during a ritual
   /** After he's as close as he gets, seconds before the train moves again. */
   resumeAfter: 6,
 
   /** Pulling into a station / leaving it. */
   arriveTime: 6, // seconds to slow to a stop
   resumeRide: 8, // seconds moving after the emergency stop before the next station
+  /**
+   * Ashdale (station 2): the train doesn't stop. The station starts `from`
+   * metres back, the train slows to `crawl` (of top speed) past it, and picks
+   * up again once it's `until` metres behind.
+   */
+  pass: { from: 80, crawl: 0.45, until: 58 },
   /** Station 2 onward: where he is when the doors close (metres from you, in your carriage). */
   afterStation1Gap: 13,
   afterStation2Gap: 8,
@@ -113,7 +123,12 @@ export const RIDE_TEXT = {
     sub: 'Announcement',
   }),
   choice: { text: 'Get off here, or stay on', sub: 'Walk through the doors to get off' },
-  choiceThoughts: ['If I get off, he gets off.', 'Two more stops.'],
+  choiceThoughts: ['If I get off, he gets off.'], // at each station where you can get off (only Kingsway now)
+  passing: {
+    text: '"This train will not be stopping at Ashdale. Police are attending at the station."',
+    sub: 'Announcement',
+  },
+  passed: 'Someone pressed the alarm.',
   stayed: ['He’s in my carriage.', 'One more stop.'],
   lastStop: { text: 'Get off', sub: 'Walk through the doors' },
   doorsLabel: 'Doors close in',
@@ -122,14 +137,32 @@ export const RIDE_TEXT = {
 /** The three stations: names on their signs, and how long the doors stay open for you to decide. */
 export const STATIONS = {
   names: ['KINGSWAY', 'ASHDALE', 'ELM PARK'],
-  doorsOpenFor: 9, // seconds to decide (stations 1 and 2)
+  passLeg: 2, // Ashdale: passed through, not stopped at
+  /** Police lights on Ashdale's empty platform (model space: z along it). Red and blue, out of step. */
+  police: { colors: ['#ff2626', '#2a4cff'], at: [-14, -2, 10], x: 1.4, y: 1.6, intensity: 26, distance: 15, flashesPerSecond: 1.6, tubes: 0.35 },
+  doorsOpenFor: 9, // seconds to decide (Kingsway; Ashdale is passed through)
   /** Getting off: walk up to an open door (this close to its middle, along the carriage, and this far over toward it)... */
   doorReach: 0.75,
   doorSideX: -72.7,
   /** ...and you're carried out to here on the platform (x). */
   stepOutX: -69.6,
+  /** Doors open while you're facing away from them: you turn toward them for this long (seconds), then it's your view again. */
+  turnToDoors: 1.4,
   /** While the doors are open you can walk this far into a doorway (x). */
   doorwayX: -71.95,
+  /**
+   * Getting off early, he follows: he appears in the next door (inside, at
+   * fromX) while your back is turned, steps straight out to outX, then walks
+   * along the platform toward you and stops stopAt metres off. You turn to
+   * watch from turnAt; it cuts to black `hold` seconds after he's stopped.
+   */
+  /**
+   * Getting off at your stop: you step out, turn back to the train, the chime
+   * and the doors close, and it pulls away with him at the window beside your
+   * door (seconds; the door glass is opaque, the side windows aren't).
+   */
+  lastStop: { turnAt: 1.3, chimeAt: 2.2, doorsAt: 2.8, leaveAt: 4.0, cutAt: 10.5, windowX: -72.55, windowAlong: 2.5 },
+  follow: { appear: 0.6, turnAt: 1.4, fromX: -72.3, outX: -70.4, stepSpeed: 0.9, walkSpeed: 0.8, stopAt: 2.2, hold: 1.8, maxTime: 14 },
   /** Station model placement (three.js) and the extras we add to it. */
   model: {
     edgeX: -71.75, // its platform edge, just past the train doors (-71.86)
@@ -146,16 +179,14 @@ export const STATIONS = {
 export const RIDE_RITUALS = {
   offerAfter: 5, // seconds into a stretch (once he's around) before the ritual is offered
   ignoreAfter: 16, // offered but not done: the moment passes
-  /** While she's doing a ritual (and a little after) he keeps his distance: never nearer than this... */
-  keepAway: 4.5,
-  /** ...for this long after it's done. */
+  /** A ritual pushes him back (to the far end, or deeper into the next carriage) while she does it, and this long after. */
   wardAfter: 6,
   batteryAtStart: 3, // phone battery (%) on the train; each phone ritual uses 1%, down to 1%
   text: {
     nudge: 'I should tell someone where I am.',
     prompt: 'E|text Jess',
-    /** Already in the chat: Jess (Maya's best friend) asked her to check in. */
-    earlier: { time: 'Today 11:41 PM', text: 'text me when ur on the train!! 🫶' },
+    /** Already in the chat: Jess, a coworker, got home first and asked if Maya made the train (Maya's text answers it). */
+    earlier: { time: 'Today 11:41 PM', text: 'just got home! did u make the last train??' },
     message: 'on the last train, 2nd car. text me back pls',
     perLetter: 0.07,
     hold: 2.5, // after "Not Delivered"
@@ -165,7 +196,7 @@ export const RIDE_RITUALS = {
   call: {
     nudge: 'If he thinks someone’s waiting for me…',
     prompt: 'E|fake a call',
-    lines: ['Hi! Yeah, I’m on the train.', 'No, I’m almost there. You can see me from the window, right?', 'Okay. Stay on the line.'],
+    lines: ['Hi! Yeah, I’m on the train.', 'I’m almost there. You’re waiting at the station, right?', 'Okay. Stay on the line.'], // any stretch: no stop count
     perLine: 2.8,
     thought: '', // the call screen says it: Call Failed
   },

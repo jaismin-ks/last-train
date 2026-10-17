@@ -23,6 +23,12 @@ import { DRACO } from '../data/street'
 
 /** Rigged, with two animations: Idle (standing, breathing) and Walk (in place, two steps). */
 const FIGURE_MODEL = '/assets/models/figure-rigged.glb'
+/**
+ * When he walks backwards: once he's heading this directly away from you
+ * (1 = straight away), and until it drops below `leave` (so he doesn't flip
+ * between the two at an angle).
+ */
+const BACKWARDS = { enter: 0.5, leave: 0.3 }
 /** Walking speed (m/s) the Walk animation's stride matches at normal playback speed. */
 const WALK_CLIP_SPEED = 1.0
 
@@ -245,18 +251,27 @@ export const Figure = forwardRef<Group>(function Figure(_, ref) {
     const root = model.parent
     const walk = root?.userData.walk as FigureWalk | null | undefined
     let stepping = false
+    let backing = false
     if (root && walk) {
       const dx = walk.x - root.position.x
       const dz = walk.z - root.position.z
       const d = Math.hypot(dx, dz)
       // caught creeping: he stops where he is and stands (easing out of the walk, never a frozen pose)
-      if (d < 0.03 || (walk.freezeWhenSeen && root.userData.seen)) root.userData.walk = null
-      else {
+      if (d < 0.03 || (walk.freezeWhenSeen && root.userData.seen)) {
+        root.userData.walk = null
+        root.userData.backing = false
+      } else {
         const step = Math.min(d, walk.speed * Math.min(dt, 0.1))
         root.position.x += (dx / d) * step
         root.position.z += (dz / d) * step
-        // face the way he's walking (turning smoothly)
-        const want = Math.atan2(dx, dz)
+        // Walking away from you, he goes backwards and keeps his eyes on you;
+        // otherwise he faces the way he's walking (turning smoothly either way)
+        const tx = camera.position.x - root.position.x
+        const tz = camera.position.z - root.position.z
+        const away = (dx * tx + dz * tz) / (d * Math.max(Math.hypot(tx, tz), 0.001)) // -1 straight away from you
+        backing = root.userData.backing ? away < -BACKWARDS.leave : away < -BACKWARDS.enter
+        root.userData.backing = backing
+        const want = backing ? Math.atan2(tx, tz) : Math.atan2(dx, dz)
         const turn = Math.atan2(Math.sin(want - root.rotation.y), Math.cos(want - root.rotation.y))
         root.rotation.y += turn * Math.min(1, dt * 6)
         stepping = true
@@ -271,7 +286,7 @@ export const Figure = forwardRef<Group>(function Figure(_, ref) {
       a.walkWeight += (target - a.walkWeight) * Math.min(1, dt * 5)
       a.walk.setEffectiveWeight(a.walkWeight)
       a.idle.setEffectiveWeight(1 - a.walkWeight)
-      if (walk) a.walk.timeScale = walk.speed / WALK_CLIP_SPEED
+      if (walk) a.walk.timeScale = ((backing ? -1 : 1) * walk.speed) / WALK_CLIP_SPEED // backwards: the steps run in reverse
       a.mixer.update(Math.min(dt, 0.1))
     }
     for (const m of mats.haze) m.uniforms.time.value = t * FIGURE_LOOK.hazeDrift

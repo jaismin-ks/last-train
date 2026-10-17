@@ -25,20 +25,20 @@ export const ENDING = {
   /**
    * How it ends depends on where she got off:
    *   followed   she got off early and he followed: the text is never sent
-   *   ambiguous  she got off at her stop without looking back: it sends
+   *   ambiguous  she stayed on to her stop and got home: it sends
    */
   kinds: {
     followed: {
       typed: 'mom',
       send: false,
-      jess: 'where are you?? are you ok',
+      jess: 'are you okay? do you want me to pick you up?',
       opening: [['Maya got off early.'], ['So did he.']],
     },
     ambiguous: {
-      typed: 'on my way home',
+      typed: 'just got home ❤️',
       send: true,
-      jess: 'did you get home??',
-      opening: [['Maya didn’t look back.'], ['She never found out if he got off too.']],
+      jess: 'are you okay? do you want me to pick you up?',
+      opening: [['Maya got home that night.'], ['Many don’t.']],
     },
   } as Record<'followed' | 'ambiguous', { typed: string; send: boolean; jess: string; opening: string[][] }>,
 

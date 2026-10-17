@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { CAPTIONS } from '../data/captions'
 import { useGame } from '../store'
 
-/** "11:58 PM — Wellesley St." chapter card, shown once when you land in the street. */
+/** "11:58 PM — Delmont St. W" chapter card, shown once when you land in the street. */
 export function LocationCard() {
   const phase = useGame((s) => s.phase)
   const [visible, setVisible] = useState(false)

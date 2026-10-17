@@ -61,7 +61,6 @@ export function Credits() {
       <Section title="References" items={REFERENCES} />
 
       <footer className={s.footer}>
-        <p className={s.thanks}>Text the people you love when you get home.</p>
         <button className={s.back} onClick={() => setPhase('endCard')}>
           Back
         </button>

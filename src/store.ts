@@ -30,7 +30,7 @@ type GameState = {
   trainDoorsOpen: boolean // platform-side train doors
   platformLightsOn: boolean // station lights (go dark later in the story)
   running: boolean
-  trainState: 'hidden' | 'arriving' | 'stopped' | 'riding' // riding: you're inside, doors left to the story
+  trainState: 'hidden' | 'arriving' | 'stopped' | 'riding' | 'leaving' // riding: you're inside, doors left to the story; leaving: pulls out without you
   inputLocked: boolean // cutscene moments: walking and looking are off
   fear: boolean // something nearby is frightening (heartbeat)
   countdown: number | null // seconds left to catch the train (null = no timer running)

@@ -24,7 +24,7 @@ export function RitualOverlay() {
           <div className={s.putAway}>E · put away</div>
           {phone.kind === 'text' ? (
             <div className={s.chat}>
-              <div className={s.to}>Jess</div>
+              <div className={s.to}>Jess (work)</div>
               <div className={s.time}>{RIDE_RITUALS.text.earlier.time}</div>
               <div className={s.incoming}>{RIDE_RITUALS.text.earlier.text}</div>
               {phone.status !== '' && <div className={s.bubble}>{RIDE_RITUALS.text.message}</div>}

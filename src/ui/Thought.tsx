@@ -6,6 +6,7 @@ import { useGame } from '../store'
 export function Thought() {
   const thought = useGame((s) => s.thought)
   const setThought = useGame((s) => s.setThought)
+  const phoneUp = useGame((s) => s.ritual.phone !== null) // the phone sits bottom-right: keep her lines clear of it
   const [shown, setShown] = useState<string | null>(null)
 
   useEffect(() => {
@@ -25,7 +26,7 @@ export function Thought() {
         left: 0,
         right: 0,
         bottom: '24%',
-        padding: '0 18%',
+        padding: phoneUp ? '0 calc(7% + 290px) 0 6%' : '0 18%',
         textAlign: 'center',
         lineHeight: 1.35,
         pointerEvents: 'none',

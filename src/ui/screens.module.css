@@ -24,8 +24,9 @@
 /* Begin */
 .begin {
   background: none; border: 0; color: var(--text); font-family: var(--font-display); font-style: italic;
-  font-size: clamp(40px, 5vw, 60px); animation: pulse 2.8s ease-in-out infinite;
+  font-size: clamp(28px, 3vw, 38px); margin-top: 6vh; animation: pulse 2.8s ease-in-out infinite;
 }
+.begin:disabled { animation: none; opacity: 0.3; cursor: default; }
 
 /* "Click anywhere to continue" and similar hints at the bottom of a screen */
 .hint {

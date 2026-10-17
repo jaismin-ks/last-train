@@ -27,6 +27,7 @@ export function Caption() {
         left: 0,
         right: 0,
         bottom: '6%',
+        padding: '0 max(24px, 12%)', // long announcements wrap instead of running edge to edge
         textAlign: 'center',
         pointerEvents: 'none',
         zIndex: 6,

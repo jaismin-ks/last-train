@@ -199,3 +199,6 @@ export function PhoneIntro() {
     </group>
   )
 }
+
+// Start fetching the screens while the player reads the opening cards
+useTexture.preload(phoneSteps.map((s) => phoneScreenUrl(s.file)))

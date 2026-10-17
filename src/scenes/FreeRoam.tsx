@@ -76,11 +76,15 @@ export function FreeRoam({ area, collide, start, startHeading }: { area: Area; c
     }
     const kd = key(true)
     const ku = key(false)
+    // left the window mid-step: the key-up never arrives, so let go here
+    const blur = () => Object.assign(strafe.current, { left: false, right: false })
     window.addEventListener('keydown', kd)
     window.addEventListener('keyup', ku)
+    window.addEventListener('blur', blur)
     return () => {
       window.removeEventListener('keydown', kd)
       window.removeEventListener('keyup', ku)
+      window.removeEventListener('blur', blur)
       setFootsteps(0)
       setHeartbeat(false)
       autoWalk.active = false

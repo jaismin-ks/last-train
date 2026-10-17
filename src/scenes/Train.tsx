@@ -45,8 +45,14 @@ export const trainLights = { level: 1, emergency: 0 }
 const EMERGENCY_COLOR = new Color('#ff4a32')
 const NORMAL_COLOR = new Color(TRAIN.light.color)
 
+/** Pulling out of a station without you (m/s²). */
+const TRAIN_LEAVE_ACCEL = 1.4
+
 /** Middle of each platform-side door when the train is stopped (filled once the model loads). */
 export const trainDoorCenters: Vector3[] = []
+
+/** How far the train has pulled away (metres along the track) while 'leaving', so things riding in it can follow. */
+export const trainLeave = { z: 0 }
 
 /**
  * The 3-carriage train (stopped position baked in Blender). Hidden until
@@ -62,6 +68,7 @@ export function Train() {
   const lights = useRef<(PointLight | null)[]>([])
   const arrivedAt = useRef<number | null>(null)
   const startedAt = useRef<number | null>(null)
+  const leftAt = useRef<number | null>(null)
   // Front of the train: it pulls in heading toward the gate (-z), so the leading
   // end is the -z end. Headlights there, aimed down the tunnel ahead.
   const head = useMemo(() => {
@@ -218,6 +225,14 @@ export function Train() {
         if (k >= 1) useGame.getState().setTrainState('stopped')
       } else if (trainState === 'riding') {
         g.position.z = 0
+        trainLeave.z = 0
+        leftAt.current = null
+      } else if (trainState === 'leaving') {
+        // pulls out the way it was heading (-z), gathering speed
+        if (leftAt.current === null) leftAt.current = clock.elapsedTime
+        const t = clock.elapsedTime - leftAt.current
+        trainLeave.z = -0.5 * TRAIN_LEAVE_ACCEL * t * t
+        g.position.z = trainLeave.z
       } else if (trainState === 'stopped') {
         g.position.z = 0
         if (arrivedAt.current === null) arrivedAt.current = clock.elapsedTime

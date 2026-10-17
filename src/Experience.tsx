@@ -16,7 +16,7 @@ import { FearVignette } from './ui/FearVignette'
 import { RitualOverlay } from './ui/RitualOverlay'
 import { SoundCaption } from './ui/SoundCaption'
 import { StaminaBar } from './ui/StaminaBar'
-import { useEffect, useRef } from 'react'
+import { useEffect, useLayoutEffect, useRef } from 'react'
 import type { RootState } from '@react-three/fiber'
 import { Station } from './scenes/Station'
 import { Ride } from './scenes/Ride'
@@ -29,9 +29,24 @@ export function Experience() {
   const paused = useGame((s) => s.paused)
   const attempt = useGame((s) => s.attempt)
   const three = useRef<RootState | null>(null)
-  // On resume, skip the time spent paused so cutscenes and walking don't jump
-  useEffect(() => {
-    if (!paused && three.current) (three.current.clock as unknown as { oldTime: number }).oldTime = performance.now()
+  // Pausing switches the 3D loop off, and three/fiber resets its clock to zero when it
+  // does (and again on resume). Every scene times its beats on that clock, so keep the
+  // time it had when paused, and skip the time spent paused so nothing jumps.
+  const pausedAt = useRef<number | null>(null)
+  useEffect(
+    () =>
+      useGame.subscribe((s, prev) => {
+        if (s.paused && !prev.paused && three.current) pausedAt.current = three.current.clock.elapsedTime
+      }),
+    [],
+  )
+  // a layout effect: runs after the Canvas applies the new frameloop, before the next frame
+  useLayoutEffect(() => {
+    const clock = three.current?.clock
+    if (paused || !clock) return
+    if (pausedAt.current !== null) clock.elapsedTime = pausedAt.current
+    ;(clock as unknown as { oldTime: number }).oldTime = performance.now()
+    pausedAt.current = null
   }, [paused])
   const showPhone = phase === 'phoneIntro'
   // Mounted early (hidden) so the street is ready the moment the descent starts

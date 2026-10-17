@@ -2,7 +2,13 @@ import { useGame } from '../store'
 import { FEAR } from '../data/fear'
 import { setHeartbeatRate, setMuffle } from '../audio/sounds'
 
-const state = { panicUntil: 0, calmUntil: 0, lastMuffle: -1 }
+/**
+ * `level` is the exact fear level; the store only gets it when it has moved a
+ * little (`pushed` is what we last gave it), so the screen isn't re-rendered
+ * every frame. Per-frame changes are tiny at 60–120 fps, so they must add up
+ * here, not in the store.
+ */
+const state = { panicUntil: 0, calmUntil: 0, lastMuffle: -1, level: 0, pushed: 0 }
 
 /** Where he is (his eyes), so a panic can drag your gaze to him. Set by the scene each frame. */
 export const fearFocus = { active: false, x: 0, y: 0, z: 0 }
@@ -18,7 +24,8 @@ export const fearFocus = { active: false, x: 0, y: 0, z: 0 }
 export function stepFear(now: number, dt: number, dist: number, inView: boolean, calm: boolean, approaching = true): 'panic' | null {
   const g = useGame.getState()
   if (g.missed) return null
-  let stress = g.stress
+  if (g.stress !== state.pushed) state.level = g.stress // set from outside (a ritual eases it, addFear, reset)
+  let stress = state.level
   let event: 'panic' | null = null
 
   if (g.panic) {
@@ -42,7 +49,11 @@ export function stepFear(now: number, dt: number, dist: number, inView: boolean,
     }
   }
 
-  if (Math.abs(stress - g.stress) > 0.002) g.setStress(stress)
+  state.level = stress
+  if (Math.abs(stress - g.stress) > 0.002 || (stress === 0 && g.stress !== 0)) {
+    g.setStress(stress)
+    state.pushed = stress
+  }
   const afraid = stress > FEAR.heartbeatAt || g.panic
   if (afraid !== g.fear) g.setFear(afraid)
   setHeartbeatRate(0.9 + 0.6 * stress)

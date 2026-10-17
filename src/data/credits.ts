@@ -150,5 +150,5 @@ export const REFERENCES: Credit[] = [
   ...ENDING.screens
     .filter((sc) => sc.source)
     .map((sc) => ({ what: sc.lines[0], who: sc.source!, where: '', license: '', url: sc.url })),
-  ...RESOURCES.map((r) => ({ what: r.name, who: r.contact, where: 'Support line', license: '', url: r.url, whoUrl: `tel:${r.tel}` })),
+  ...RESOURCES.map((r) => ({ what: r.name, who: r.contact, where: 'Support line', license: '', url: r.url, whoUrl: r.href })),
 ]

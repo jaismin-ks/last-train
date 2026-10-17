@@ -1,0 +1,18 @@
+/* The support button: flat and square. Dark red until pressed; then a red outline holding the count */
+.support { display: grid; gap: 18px; padding-top: 34px; border-top: 1px solid rgba(232, 236, 233, 0.12); }
+.supportAsk { font-family: var(--font-display); font-style: italic; font-size: clamp(19px, 2.2vw, 24px); line-height: 1.4; }
+.supportButton {
+  width: 100%; padding: 22px 16px; border: 1px solid #741610; border-radius: 0; background: #741610; color: #fff;
+  font-family: var(--font-ui); font-size: 14px; font-weight: 600; letter-spacing: 0.3em; text-transform: uppercase;
+  cursor: pointer; transition: background 0.25s, border-color 0.25s, color 0.25s;
+}
+.supportButton:hover:not(:disabled) { background: #8a1c15; border-color: #8a1c15; }
+.supportButton:active:not(:disabled) { background: #5e110c; border-color: #5e110c; }
+.supportButton:focus-visible { outline: 1px solid var(--text); outline-offset: 4px; }
+/* pressed: it empties to a red outline, and the count shows inside */
+.supportPressed { background: transparent; border-color: #b8322a; color: #e0796e; cursor: default; }
+/* under the pressed button */
+.supportAfter { font-family: var(--font-display); font-style: italic; font-size: clamp(19px, 2.2vw, 24px); line-height: 1.4; }
+.supportAfter:not(:empty) { animation: fade 0.8s ease both; }
+
+@keyframes fade { from { opacity: 0 } to { opacity: 1 } }

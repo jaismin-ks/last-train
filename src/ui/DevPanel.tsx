@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useGame } from '../store'
+import { PRESSED } from '../systems/support'
 
 /**
  * Testing only (never in the published build): a panel on the left to jump to
@@ -93,6 +94,16 @@ export function DevPanel() {
           </button>
           <button style={item} onClick={() => useGame.getState().setTrainDoorsOpen(!useGame.getState().trainDoorsOpen)} title="Same as pressing T">
             Toggle train doors (T)
+          </button>
+          <button
+            style={item}
+            onClick={() => {
+              localStorage.removeItem(PRESSED)
+              location.reload()
+            }}
+            title="Forget that this browser pressed the support button (dev counter only)"
+          >
+            Reset support button
           </button>
         </div>
       )}

@@ -22,13 +22,13 @@ import { RIDE as R, RIDE_RITUALS, RIDE_TEXT as TEXT, SEATS, SIREN, STATIONS, TUN
 import { StationStop } from './StationStop'
 import { useGame } from '../store'
 import { playKeyTap, playLowBattery, playOwnKeys, playPresence, playTrainBrake, playTrainChime, playTrainDoors, setTrainRun, stopAllAudio } from '../audio/sounds'
-import { Train, TRAIN_MODEL, trainDoorCenters, trainLights } from './Train'
+import { Train, TRAIN_MODEL, trainDoorCenters, trainLeave, trainLights } from './Train'
 import { FreeRoam, autoWalk, cameraShake, seat, standing } from './FreeRoam'
 import { Figure, isWalking, stopWalking, walkTo } from './Figure'
 import { addFear, fearFocus, freezeForGood, resetFear, stepFear } from '../systems/fear'
 import { APPROACH, CAUGHT, FEAR, FIGURE_WALK } from '../data/fear'
 
-type Beat = 'depart' | 'cruise' | 'brake' | 'held' | 'resume' | 'arrive' | 'doors' | 'closing' | 'exit' | 'cut'
+type Beat = 'depart' | 'cruise' | 'brake' | 'held' | 'resume' | 'pass' | 'arrive' | 'doors' | 'closing' | 'exit' | 'cut'
 type RitualKind = 'text' | 'call' | 'keys'
 
 /** Three rituals in a random order (one per stretch). */
@@ -266,6 +266,7 @@ export function Ride() {
   const speed = useRef(0) // 0 stopped → 1 full speed
   const siren = useRef(0) // emergency beacon, 0 off → 1 spinning
   const station = useRef(9999) // where the current station is along the track (0 = alongside)
+  const police = useRef(false) // the station going by is the alarm station
   const fill = useRef<HemisphereLight>(null)
   const area = useMemo(() => ({ ...R.area }), []) // widened while the doors are open
   const st = useRef({
@@ -293,6 +294,8 @@ export function Ride() {
     ePressed: false,
     textPending: false, // a text that didn't send: it goes through at the next station
     exitDoorZ: 0, // the door you got off through
+    stoodAt: 0, // getting off early: when he stopped in front of you on the platform
+    lookUntil: 0, // doors just opened behind you: you turn toward them until then
     prevX: 0, // your x last frame (walking toward a door?)
     countdown: 0,
   })
@@ -403,6 +406,11 @@ export function Ride() {
       s.since = now
     }
     const lastStation = s.leg >= STATIONS.names.length
+    // the turn toward the doors is only a nudge: then the view is yours again
+    if (s.lookUntil && now > s.lookUntil) {
+      if (s.beat !== 'exit') autoWalk.face = null // (getting off sets its own)
+      s.lookUntil = 0
+    }
 
     // Fade in from black once the doors have shut behind you
     const sinceStart = now - s.started
@@ -492,28 +500,20 @@ export function Ride() {
      * He paces the carriage, slowly, from one end to the other and back. If
      * you're standing in the aisle in his way he stops short, stares, and
      * turns back; if you're sitting (or off to the side) he walks right past.
-     * During a ritual he won't come near at all: he turns back short of you,
-     * and if he's already close he walks off to the far end.
+     * During a ritual (and a little after) he backs off to the far end of the
+     * carriage, eyes still on you, and waits there.
      */
     const pace = () => {
       if (!fig || !inYourCarriage || game.panic || s.finalStrike) return
       const inAisle = !seat.active && Math.abs(me.x - CAR_X) < R.pace.aisleHalfWidth
       const ahead = (me.z - fig.position.z) * s.paceDir > 0
       if (warded) {
-        const gap = Math.abs(me.z - fig.position.z)
-        if (gap < RIDE_RITUALS.keepAway && (ahead || !isWalking(fig))) {
-          // too close: away to the end behind him
-          s.paceDir = Math.sign(fig.position.z - me.z) || 1
-          s.paceRestUntil = 0
-          walkTo(fig, CAR_X, s.paceDir > 0 ? R.area.maxZ - 0.4 : R.area.minZ + 0.4, R.pace.speed)
-          return
-        }
-        if (isWalking(fig) && ahead && gap < RIDE_RITUALS.keepAway + 1) {
-          stopWalking(fig) // he stops short, stares, and turns back
-          s.paceRestUntil = now + R.pace.stareFor
-          s.paceDir = -s.paceDir
-          return
-        }
+        s.paceDir = Math.sign(fig.position.z - me.z) || 1
+        const farEnd = s.paceDir > 0 ? R.area.maxZ - 0.4 : R.area.minZ + 0.4
+        if (Math.abs(fig.position.z - farEnd) > 0.3) walkTo(fig, CAR_X, farEnd, R.pace.retreat)
+        else if (isWalking(fig)) stopWalking(fig)
+        s.paceRestUntil = now + R.pace.restAtEnd // when it wears off, a moment more before he comes back
+        return
       }
       if (isWalking(fig) && inAisle && ahead && Math.abs(me.z - fig.position.z) < APPROACH.holdOff + 0.4) {
         stopWalking(fig) // you're in the way: he stops and stares
@@ -660,6 +660,9 @@ export function Ride() {
             }
           }
           if (s.seenAt > 0) calm = ritual(s.seenAt + RIDE_RITUALS.offerAfter)
+          // the ritual works on him even from the next carriage: he backs away from the door, into the dark
+          if (fig?.visible && !inYourCarriage && (s.ritual === 'doing' || now < s.wardUntil))
+            once('backOff', () => walkTo(fig, R.nextCarAt.x, R.nextCarAt.z + Math.sign(R.nextCarAt.z - me.z) * R.nextCarBackOff, R.pace.retreat))
         } else {
           calm = ritual(s.since + RIDE_RITUALS.offerAfter)
           // stretch 3: the lights keep failing, and he's closer each time
@@ -722,12 +725,42 @@ export function Ride() {
         pace()
         speed.current = Math.min(1, t / R.accelerate)
         if (t > R.resumeRide) {
-          game.setCaption(TEXT.arriving(STATIONS.names[s.leg - 1], lastStation))
           setStationName(STATIONS.names[s.leg - 1])
-          station.current = -(TUNNEL.topSpeed * R.arriveTime) / 2
-          go('arrive')
+          if (s.leg === STATIONS.passLeg) {
+            // where the alarm was: it doesn't stop here
+            game.setCaption(TEXT.passing)
+            police.current = true
+            station.current = -R.pass.from
+            go('pass')
+          } else {
+            game.setCaption(TEXT.arriving(STATIONS.names[s.leg - 1], lastStation))
+            station.current = -(TUNNEL.topSpeed * R.arriveTime) / 2
+            go('arrive')
+          }
         }
         break
+
+      case 'pass': {
+        // a crawl past the empty platform, police lights flashing; then on, faster
+        pace()
+        if (t > R.paShowFor) once('passCaptionOff', () => game.setCaption(null))
+        if (station.current < R.pass.until) speed.current = MathUtils.damp(speed.current, R.pass.crawl, 1.2, dt)
+        else {
+          once('passed', () => {
+            game.setCaption(null)
+            game.setThought(TEXT.passed)
+          })
+          speed.current = Math.min(1, speed.current + dt / R.accelerate)
+          if (speed.current >= 1) {
+            police.current = false
+            game.setThought(TEXT.stayed[1]) // one more stop
+            s.leg += 1
+            s.ritual = 'none'
+            go('cruise')
+          }
+        }
+        break
+      }
 
       case 'arrive': {
         pace()
@@ -749,6 +782,13 @@ export function Ride() {
           once(`open${s.leg}`, () => {
             game.setTrainDoorsOpen(true)
             playTrainDoors()
+            // facing away from the open doors (the station's behind you)? turn toward them
+            const door = trainDoorCenters.slice().sort((a, b) => Math.abs(a.z - me.z) - Math.abs(b.z - me.z))[0]
+            camera.getWorldDirection(tmp.p)
+            if (door && tmp.p.x * Math.sign(door.x - me.x) < 0.3) {
+              autoWalk.face = Math.atan2(door.x - me.x, door.z - me.z)
+              s.lookUntil = now + STATIONS.turnToDoors
+            }
             area.maxX = STATIONS.doorwayX // you can walk into an open doorway (the frames still block elsewhere)
             game.setCaption(lastStation ? TEXT.lastStop : TEXT.choice)
             if (!lastStation) {
@@ -776,6 +816,7 @@ export function Ride() {
           // out through the middle of the door, a couple of steps onto the platform, facing the wall
           Object.assign(autoWalk, { active: true, x: STATIONS.stepOutX, z: door.z, speed: 1.5, face: Math.PI / 2 })
           s.exitDoorZ = door.z
+          s.lookUntil = 0
           go('exit')
           break
         }
@@ -812,22 +853,52 @@ export function Ride() {
 
       case 'exit': {
         const followed = game.endingKind === 'followed'
-        if (followed && fig && t > 1.3)
-          once('follows', () => {
-            // he gets off too, out of the next door along; you turn and see him
-            const other = trainDoorCenters
-              .filter((d) => Math.abs(d.z - s.exitDoorZ) > 2)
-              .sort((a, b) => Math.abs(a.z - s.exitDoorZ) - Math.abs(b.z - s.exitDoorZ))[0]
-            const z = other?.z ?? s.exitDoorZ + 5
-            stopWalking(fig)
-            fig.position.set(-72.3, R.area.floorY, z)
-            fig.userData.eyesOpen = true
-            fig.visible = true
-            walkTo(fig, STATIONS.stepOutX, z + Math.sign(s.exitDoorZ - z) * 1.2, FIGURE_WALK.toward)
-            autoWalk.face = Math.atan2(-72.3 - me.x, z - me.z)
-          })
-        // a few seconds on the platform, then black, the chime ringing over silence
-        if (t > (followed ? 3.6 : 2.0)) {
+        const F = STATIONS.follow
+        if (followed && fig) {
+          // he gets off too: in the next door along while your back is turned...
+          if (t > F.appear)
+            once('follows', () => {
+              const other = trainDoorCenters
+                .filter((d) => Math.abs(d.z - s.exitDoorZ) > 2)
+                .sort((a, b) => Math.abs(a.z - s.exitDoorZ) - Math.abs(b.z - s.exitDoorZ))[0]
+              const z = other?.z ?? s.exitDoorZ + 5
+              stopWalking(fig)
+              fig.position.set(F.fromX, R.area.floorY, z)
+              fig.rotation.y = Math.PI / 2 // facing out of the train
+              fig.userData.eyesOpen = true
+              fig.visible = true
+              walkTo(fig, F.outX, z, F.stepSpeed) // ...straight out onto the platform
+            })
+          // then along the platform toward you, slowly, stopping a couple of metres off
+          if (s.said.has('follows') && !isWalking(fig))
+            once('comes', () => walkTo(fig, F.outX, me.z + Math.sign(fig.position.z - me.z) * F.stopAt, F.walkSpeed))
+          if (s.said.has('comes') && !isWalking(fig)) once('stands', () => (s.stoodAt = now)) // and he turns to face you
+          // you turn and keep him in view
+          if (s.said.has('follows') && t > F.turnAt) autoWalk.face = Math.atan2(fig.position.x - me.x, fig.position.z - me.z)
+        }
+        // your stop: turn back to the train; the doors close and it pulls away, him at the door window
+        const L = STATIONS.lastStop
+        if (!followed) {
+          const windowZ = s.exitDoorZ + L.windowAlong
+          if (t > L.turnAt) once('turnBack', () => (autoWalk.face = Math.atan2(L.windowX - me.x, windowZ - me.z)))
+          if (t > L.chimeAt) once('lastChime', () => playTrainChime())
+          if (t > L.doorsAt)
+            once('lastDoors', () => {
+              game.setTrainDoorsOpen(false)
+              playTrainDoors()
+              if (fig) {
+                stopWalking(fig)
+                fig.position.set(L.windowX, R.area.floorY, windowZ)
+                fig.userData.eyesOpen = true
+                fig.visible = true
+              }
+            })
+          if (t > L.leaveAt) once('leaves', () => game.setTrainState('leaving'))
+          if (fig && s.said.has('lastDoors')) fig.position.z = windowZ + trainLeave.z // he rides away with it
+        }
+        // on the platform, then black, the chime ringing over silence (followed: once he's stood facing you a moment)
+        const over = followed ? (s.stoodAt > 0 && now - s.stoodAt > F.hold) || t > F.maxTime : t > L.cutAt
+        if (over) {
           game.setBlackout(1)
           stopAllAudio(50)
           setTimeout(playTrainChime, 150) // after everything else has stopped
@@ -864,18 +935,22 @@ export function Ride() {
         ? null
         : s.ritual === 'offered'
           ? ritualCfg.prompt
-          : seat.active
-            ? SEATS.standPrompt
-            : nearest
-              ? SEATS.sitPrompt
-              : null
+          : game.caption // announcements and choices come first: no sit / stand hint over them
+            ? null
+            : seat.active
+              ? SEATS.standPrompt
+              : nearest
+                ? SEATS.sitPrompt
+                : null
     if (game.prompt !== prompt) game.setPrompt(prompt)
 
     // During the emergency everything else dims, so the siren's red carries the scene
     if (fill.current) fill.current.intensity = FILL * (1 - (1 - SIREN.ambient) * siren.current)
 
     if (s.beat !== 'brake') cameraShake.amount = TUNNEL.shake * speed.current
-    setTrainRun(s.beat === 'cut' ? 0 : speed.current)
+    // the train pulling away from your stop still rumbles, fading as it goes
+    const leaving = s.beat === 'exit' && game.trainState === 'leaving' ? Math.min(1, -trainLeave.z / 30) * Math.max(0, 1 + trainLeave.z / 120) : 0
+    setTrainRun(s.beat === 'cut' ? 0 : Math.max(speed.current, leaving))
     // Fear: rises with him near and in sight. Only the rituals ease it, briefly.
     const fearDist = fig?.visible ? (inYourCarriage ? near : dist) : Infinity
     const approaching = !warded && now - s.approachedAt < 0.8
@@ -902,7 +977,7 @@ export function Ride() {
       <hemisphereLight ref={fill} args={['#1b2420', '#050505', FILL]} />
       <Train />
       <Tunnel speed={speed} station={station} />
-      <StationStop name={stationName} offset={station} centreZ={CAR_Z} />
+      <StationStop name={stationName} offset={station} centreZ={CAR_Z} police={police} />
       <Siren level={siren} />
       <Figure ref={figure} />
       <FreeRoam area={area} collide={train} start={start} startHeading={MathUtils.degToRad(R.start.headingDeg)} />

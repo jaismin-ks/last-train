@@ -33,7 +33,7 @@ export type PhoneStep = { file: string; advance: Advance }
 
 export const phoneSteps: PhoneStep[] = [
   // Lock screen → drag up to unlock
-  { file: '01-lock.png', advance: { type: 'swipeUp' } },
+  { file: '01-lock.webp', advance: { type: 'swipeUp' } },
   // Chat open → tap the message field, the message types itself out, tap send
   {
     file: '02-chat-open.png',

@@ -1,6 +1,11 @@
+import { useEffect, useState } from 'react'
+import { useProgress } from '@react-three/drei'
 import { useGame } from '../store'
 import { startAmbience } from '../audio/sounds'
 import s from './screens.module.css'
+
+/** If loading stalls (a file that never arrives), let them begin anyway after this long (seconds). */
+const LOAD_PATIENCE = 25
 
 /** Small headphones icon. */
 function Headphones() {
@@ -13,21 +18,53 @@ function Headphones() {
   )
 }
 
+/**
+ * The title and Begin, on one screen. The models, sky and phone screens start downloading as soon as the
+ * page opens (while the warning and title are read); if they're still coming
+ * in, Begin waits with a quiet percentage instead of dropping into a black screen.
+ */
 export function StartScreen() {
   const setPhase = useGame((st) => st.setPhase)
+  const { active, progress } = useProgress()
+  const [waitedEnough, setWaitedEnough] = useState(false)
+  useEffect(() => {
+    const t = setTimeout(() => setWaitedEnough(true), LOAD_PATIENCE * 1000)
+    return () => clearTimeout(t)
+  }, [])
+  const ready = !active || progress >= 100 || waitedEnough
+  const begin = () => {
+    startAmbience() // outside ambience runs from the start (this click also unlocks audio)
+    setPhase('phoneIntro')
+  }
+  // Enter or Space works too, once it's ready
+  useEffect(() => {
+    if (!ready) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.code === 'Enter' || e.code === 'Space') begin()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  })
+
   return (
     <div className={s.screen}>
+      <h1 className={s.title}>Last Train</h1>
+      <p className={s.subtitle}>text me when you get home</p>
       <button
         className={s.begin}
-        onClick={() => {
-          startAmbience() // outside ambience runs from the start (this click also unlocks audio)
-          setPhase('phoneIntro')
-        }}
+        disabled={!ready}
+        onClick={begin}
       >
         Begin
       </button>
-      <p className={s.headphones}>
-        <Headphones /> Headphones recommended
+      <p className={s.headphones} aria-live="polite">
+        {ready ? (
+          <>
+            <Headphones /> Headphones recommended
+          </>
+        ) : (
+          `Loading ${Math.floor(progress)}%`
+        )}
       </p>
     </div>
   )

@@ -49,14 +49,19 @@ export function Hud() {
     return () => window.removeEventListener('keydown', onKey)
   }, [])
 
-  // Pause by itself when the player leaves the tab
+  // Pause by itself when the player leaves: another tab, or clicking into another window or app
   useEffect(() => {
-    const onVisibility = () => {
+    const leave = () => {
       const st = useGame.getState()
-      if (document.hidden && IN_GAME.includes(st.phase) && !st.paused) st.setPaused(true)
+      if (IN_GAME.includes(st.phase) && !st.paused) st.setPaused(true)
     }
+    const onVisibility = () => document.hidden && leave()
     document.addEventListener('visibilitychange', onVisibility)
-    return () => document.removeEventListener('visibilitychange', onVisibility)
+    window.addEventListener('blur', leave)
+    return () => {
+      document.removeEventListener('visibilitychange', onVisibility)
+      window.removeEventListener('blur', leave)
+    }
   }, [])
 
   // Freeze every sound while paused
