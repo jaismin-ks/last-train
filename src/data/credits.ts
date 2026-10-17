@@ -104,6 +104,9 @@ export const CREDITS: CreditGroup[] = [
       pixabay('Opening a subway door from the inside', 'derjuli (via freesound_community)', 'https://pixabay.com/sound-effects/city-opening-a-subway-door-from-the-inside-47841/', 'https://freesound.org/people/derjuli/'),
       pixabay('The man laughs madly', 'SakkeSode', 'https://pixabay.com/sound-effects/people-the-man-laughs-madly-182951/'),
       pixabay('Heartbeat 01', 'BRVHRTZ', 'https://pixabay.com/sound-effects/film-special-effects-heartbeat-01-brvhrtz-225058/'),
+      pixabay('Emergency alarm', 'NocturnalNarrations (via freesound_community)', 'https://pixabay.com/sound-effects/film-special-effects-emergency-alarm-69780/', 'https://freesound.org/people/NocturnalNarrations/'),
+      pixabay('Subway sound (the train running)', 'dpattonwhite (via freesound_community)', 'https://pixabay.com/sound-effects/city-subway-sound-38903/', 'https://freesound.org/people/dpattonwhite/'),
+      pixabay('Horror opening (trailer)', 'ArctSound', 'https://pixabay.com/sound-effects/horror-horror-opening-603777/', 'https://pixabay.com/users/arctsound-27113883/'),
       pixabay('Heavy footsteps walking', 'freesound_community', 'https://pixabay.com/sound-effects/household-heavy-footsteps-walking-35722/'),
       pixabay('Eerie ambience', 'Razorrekker (via freesound_community)', 'https://pixabay.com/sound-effects/film-special-effects-eerie-ambience-65606/', 'https://freesound.org/people/Razorrekker/'),
       ...[
