@@ -154,7 +154,7 @@ function TextHome({ typedText, send, jess, leaving, onDone }: { typedText: strin
       <div className={s.chat}>
         {jessIn && (
           <div className={s.notification}>
-            <span className={s.notificationFrom}>Jess (work)</span>
+            <span className={s.notificationFrom}>Jess (roommate)</span>
             <span>{jess}</span>
           </div>
         )}

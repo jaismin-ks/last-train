@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
-import { useGLTF } from '@react-three/drei'
+import { Preload, useGLTF } from '@react-three/drei'
 import { Box3, DoubleSide, Vector3, type Mesh, type MeshStandardMaterial, type PerspectiveCamera } from 'three'
 import { COUNTDOWN, DRACO, SCENE_FADE } from '../data/street'
 import { useGame } from '../store'
@@ -9,6 +9,7 @@ import markers from '../data/station-markers.json'
 import { CAPTIONS, THOUGHTS } from '../data/captions'
 import { Player, type Ride } from './Player'
 import { FreeRoam, type Area } from './FreeRoam'
+import { Benches } from './Benches'
 import { StationLights } from './StationLights'
 import { EscalatorLights } from './EscalatorLights'
 import { Train } from './Train'
@@ -167,6 +168,7 @@ export function Station() {
   return (
     <>
       <color attach="background" args={['#010403']} />
+      <Preload all />
       <fog attach="fog" args={['#03110b', 5, 55]} />
       {/* Faint green fill so the darkness between lights isn't pure black */}
       <hemisphereLight args={['#2f6b4f', '#050807', 0.9]} />
@@ -192,6 +194,7 @@ export function Station() {
         />
       )}
       {free && <FreeRoam area={PLATFORM} collide={scene} start={free.at} startHeading={free.heading} />}
+      {free && <Benches scene={scene} floorY={PLATFORM.floorY} />}
       <StreetEffects />
     </>
   )

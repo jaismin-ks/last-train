@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
-import { useGLTF } from '@react-three/drei'
+import { Preload, useGLTF } from '@react-three/drei'
 import {
   Frustum,
   MathUtils,
@@ -21,7 +21,7 @@ import { DRACO, SCENE_FADE } from '../data/street'
 import { RIDE as R, RIDE_RITUALS, RIDE_TEXT as TEXT, SEATS, SIREN, STATIONS, TUNNEL } from '../data/ride'
 import { StationStop } from './StationStop'
 import { useGame } from '../store'
-import { playKeyTap, playLowBattery, playOwnKeys, playPresence, playTrainBrake, playTrainChime, playTrainDoors, setTrainRun, stopAllAudio } from '../audio/sounds'
+import { playKeyTap, playLowBattery, playOwnKeys, playPresence, playTrainBrake, playTrainChime, playTrainDoors, setAlarm, setTrainRun, stopAllAudio } from '../audio/sounds'
 import { Train, TRAIN_MODEL, trainDoorCenters, trainLeave, trainLights } from './Train'
 import { FreeRoam, autoWalk, cameraShake, seat, standing } from './FreeRoam'
 import { Figure, isWalking, stopWalking, walkTo } from './Figure'
@@ -296,6 +296,7 @@ export function Ride() {
     exitDoorZ: 0, // the door you got off through
     stoodAt: 0, // getting off early: when he stopped in front of you on the platform
     lookUntil: 0, // doors just opened behind you: you turn toward them until then
+    passedAt: 0, // when the train cleared Ashdale
     prevX: 0, // your x last frame (walking toward a door?)
     countdown: 0,
   })
@@ -334,6 +335,7 @@ export function Ride() {
     return () => {
       window.removeEventListener('keydown', onKey)
       seat.active = false
+      setAlarm(false)
       useGame.getState().setPrompt(null)
     }
   }, [])
@@ -468,9 +470,11 @@ export function Ride() {
       s.closed += towardHim
       if (s.closed >= APPROACH.approachStep) {
         s.closed = 0
-        // a step of his own, but he never closes the last stretch himself
-        const k = Math.max(APPROACH.holdOff, near - APPROACH.stepToward) / Math.max(near, 0.001)
-        walkTo(fig, me.x + (fig.position.x - me.x) * k, me.z + (fig.position.z - me.z) * k, FIGURE_WALK.toward)
+        // a step of his own (never the last stretch, and never back: already close, he holds his ground)
+        const to = Math.max(APPROACH.holdOff, near - APPROACH.stepToward)
+        const k = to / Math.max(near, 0.001)
+        if (to >= near - 0.05) stopWalking(fig)
+        else walkTo(fig, me.x + (fig.position.x - me.x) * k, me.z + (fig.position.z - me.z) * k, FIGURE_WALK.toward)
         addFear(APPROACH.fearJump)
       }
     } else s.closed = 0
@@ -498,8 +502,8 @@ export function Ride() {
 
     /**
      * He paces the carriage, slowly, from one end to the other and back. If
-     * you're standing in the aisle in his way he stops short, stares, and
-     * turns back; if you're sitting (or off to the side) he walks right past.
+     * you're standing in the aisle in his way he stops short and stares (he
+     * never backs off); if you're sitting (or off to the side) he walks right past.
      * During a ritual (and a little after) he backs off to the far end of the
      * carriage, eyes still on you, and waits there.
      */
@@ -516,9 +520,8 @@ export function Ride() {
         return
       }
       if (isWalking(fig) && inAisle && ahead && Math.abs(me.z - fig.position.z) < APPROACH.holdOff + 0.4) {
-        stopWalking(fig) // you're in the way: he stops and stares
+        stopWalking(fig) // you're in the way: he stops and stares, and holds his ground until you move
         s.paceRestUntil = now + R.pace.stareFor
-        s.paceDir = -s.paceDir
         return
       }
       if (isWalking(fig) || now < s.paceRestUntil) return
@@ -630,6 +633,7 @@ export function Ride() {
       case 'depart': {
         if (sinceStart > 0.3 && s.leg === 1) once('doors', () => playTrainDoors())
         if (sinceStart > 2.5 && s.leg === 1) once('boarded', () => game.setThought(TEXT.boarded))
+        if (sinceStart > 6.5 && s.leg === 1) once('unsure', () => game.setThought(TEXT.unsure))
         speed.current = MathUtils.clamp((t - (s.leg === 1 ? 1.5 : 0.5)) / R.accelerate, 0, 1)
         speed.current *= speed.current // gentle start
         if (speed.current >= 1) {
@@ -650,10 +654,7 @@ export function Ride() {
             s.appearedAt = now
           }
           if (fig?.visible) {
-            if (inView && s.seenAt < 0) {
-              s.seenAt = now
-              game.setThought(TEXT.seenHim)
-            }
+            if (inView && s.seenAt < 0) s.seenAt = now // you see him through the end door (no words: it answers her)
             if (s.seenAt < 0 && now - s.appearedAt > R.figureLookTimeout) {
               s.seenAt = now
               playPresence('cough') // you never looked: you hear him
@@ -693,6 +694,7 @@ export function Ride() {
         trainLights.level = Math.random() < 0.4 ? 0.05 : 1 - (1 - SIREN.carriageLight) * k
         trainLights.emergency = SIREN.warmth * k
         siren.current = k
+        if (k > 0.3) setAlarm(true) // the emergency alarm sounds as the siren comes on
         if (k >= 1) {
           speed.current = 0
           trainLights.level = SIREN.carriageLight
@@ -716,6 +718,7 @@ export function Ride() {
           trainLights.level = 1
           trainLights.emergency = 0
           siren.current = 0
+          setAlarm(false)
           go('resume')
         }
         break
@@ -749,9 +752,11 @@ export function Ride() {
           once('passed', () => {
             game.setCaption(null)
             game.setThought(TEXT.passed)
+            s.passedAt = now
           })
+          if (now - s.passedAt > 3.6) once('passedAfter', () => game.setThought(TEXT.passedAfter))
           speed.current = Math.min(1, speed.current + dt / R.accelerate)
-          if (speed.current >= 1) {
+          if (speed.current >= 1 && now - s.passedAt > 8.5) {
             police.current = false
             game.setThought(TEXT.stayed[1]) // one more stop
             s.leg += 1
@@ -831,7 +836,8 @@ export function Ride() {
             game.setTrainDoorsOpen(false)
             playTrainChime()
             area.maxX = R.area.maxX
-            if (me.x > R.area.maxX) Object.assign(seat, { active: false, changed: true, standX: R.area.maxX - 0.1, standZ: me.z })
+            // standing in the doorway: back inside (sitting on the door-side seats is fine where you are)
+            if (!seat.active && me.x > R.area.maxX) Object.assign(seat, { active: false, changed: true, standX: R.area.maxX - 0.1, standZ: me.z })
             go('closing')
           }
         }
@@ -962,9 +968,11 @@ export function Ride() {
         s.finalStrike = true
         walkTo(fig, me.x, me.z, FIGURE_WALK.toward)
       } else {
-        // he walks a little closer and stops; then you can move again
-        const k = Math.max(APPROACH.holdOff, near - FEAR.panicStep) / Math.max(near, 0.001)
-        walkTo(fig, me.x + (fig.position.x - me.x) * k, me.z + (fig.position.z - me.z) * k, FIGURE_WALK.toward)
+        // he walks a little closer and stops (already close: he stays put, staring); then you can move again
+        const to = Math.max(APPROACH.holdOff, near - FEAR.panicStep)
+        const k = to / Math.max(near, 0.001)
+        if (to >= near - 0.05) stopWalking(fig)
+        else walkTo(fig, me.x + (fig.position.x - me.x) * k, me.z + (fig.position.z - me.z) * k, FIGURE_WALK.toward)
       }
       game.setThought(FEAR.lastLines[Math.min(s.strikes, FEAR.lastLines.length) - 1])
     }
@@ -974,6 +982,7 @@ export function Ride() {
     <>
       <color attach="background" args={['#000']} />
       <fog attach="fog" args={['#000000', 4, 40]} />
+      <Preload all />
       <hemisphereLight ref={fill} args={['#1b2420', '#050505', FILL]} />
       <Train />
       <Tunnel speed={speed} station={station} />

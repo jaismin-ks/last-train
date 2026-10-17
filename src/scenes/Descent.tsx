@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { Preload } from '@react-three/drei'
 import { useFrame, useThree } from '@react-three/fiber'
 import { Color, Fog, MathUtils, PerspectiveCamera, Vector3 } from 'three'
 import { DESCENT, EYE_HEIGHT, FOG, NIGHT_LIGHT, PLAYER_START, STREET_ROUTE, COUNTDOWN } from '../data/street'
@@ -93,6 +94,7 @@ export function Descent() {
   return (
     <>
       <NightSky intensity={sky} />
+      <Preload all />
       <SkyHaze opacity={sky} />
       {/* Placeholder night lighting until lamps and windows are lit */}
       <hemisphereLight args={[NIGHT_LIGHT.skyColor, NIGHT_LIGHT.groundColor, NIGHT_LIGHT.sky * sky]} />

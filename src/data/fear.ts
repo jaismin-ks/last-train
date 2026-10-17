@@ -24,14 +24,14 @@ export const FEAR = {
    * two times he walks a little closer and stops, and you can move again.
    * The third time he walks all the way to you, and it's over.
    */
-  panicDistance: 4,
+  panicDistance: 6,
   strikes: 3,
   lastLines: ['My legs won’t move.', 'Not again.', '…'],
 
   // Effects at full fear
   fovDrop: 16, // degrees narrower view
   slowDown: 0.45, // walking speed lost
-  muffle: 0.85, // how muffled everything sounds (0 = not at all)
+  muffle: 0.45, // how muffled everything sounds (0 = not at all); kept light so the train and announcements still carry
   vignette: 0.9, // how dark the screen edges get
 }
 
@@ -45,9 +45,9 @@ export const APPROACH = {
   approachStep: 1.0,
   stepToward: 1.4,
   fearJump: 0.12,
-  contact: 1.5, // only YOU walking into him gets this close
+  contact: 3.5, // walk this close to him and it's over (only you walking toward him counts)
   /** His own steps toward you (approach or panic) always stop this far away. */
-  holdOff: 2.2,
+  holdOff: 4.5, // (kept outside `contact`, so he never puts you there himself)
 }
 
 /** How he walks (metres per second). */
@@ -58,6 +58,6 @@ export const FIGURE_WALK = {
 
 /** The screen when he reaches you. He never speaks. */
 export const CAUGHT = {
-  heading: 'You know how this ends.',
-  line: 'So does she.',
+  heading: 'You got too close.',
+  line: '',
 }

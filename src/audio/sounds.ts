@@ -17,6 +17,7 @@ const CAPTION_FOR = {
   brake: 'brakes screeching',
   ownKeys: 'your keys',
   lowBattery: 'low battery',
+  alarm: 'emergency alarm',
 } as const
 let captionTimer = 0
 export function captionSound(kind: keyof typeof CAPTION_FOR, seconds = 3) {
@@ -177,6 +178,28 @@ export function playPresence(kind: PresenceKind = 'steps') {
   setTimeout(() => howl.fade(peak, 0, 900, id), Math.max(600, length - 1000)) // and fade away
 }
 
+/**
+ * His footsteps on the platform: a loop that runs exactly while he walks, louder
+ * the closer he is. `volume` 0 fades it out (he's stopped).
+ */
+const figureSteps = new Howl({ src: ['/assets/audio/sfx/heavy-steps.mp3'], volume: 0, loop: true, preload: true })
+let figureStepsOn = false
+export function setFigureSteps(volume: number) {
+  if (volume > 0.005) {
+    if (!figureStepsOn) {
+      figureStepsOn = true
+      if (!figureSteps.playing()) figureSteps.play()
+      figureSteps.fade(figureSteps.volume() as number, volume, 250)
+    } else figureSteps.volume(volume)
+  } else if (figureStepsOn) {
+    figureStepsOn = false
+    figureSteps.fade(figureSteps.volume() as number, 0, 300)
+    figureSteps.once('fade', () => {
+      if (!figureStepsOn) figureSteps.pause()
+    })
+  }
+}
+
 /** Your own keys, taken out (the keys ritual). */
 const ownKeys = sfx('keys-jingle', 0.35)
 export const playOwnKeys = () => {
@@ -217,9 +240,12 @@ const trainArrive = sfx('train-arrive', 0.9)
 const trainDoors = sfx('train-doors', 0.7)
 const trainChime = sfx('train-chime', 0.6)
 export const TRAIN_ARRIVE_STOPS_AT = 29 // seconds into the arrival sound when the train has stopped
-export const playTrainArrive = () => {
+/** The train coming in; `from` skips into the recording (seconds) to shorten the wait. */
+export const playTrainArrive = (from = 0) => {
   captionSound('trainFar', 5)
-  return trainArrive.play()
+  const id = trainArrive.play()
+  if (from > 0) trainArrive.seek(from, id)
+  return id
 }
 export const playTrainDoors = () => {
   captionSound('doors', 2)
@@ -229,6 +255,25 @@ export const playTrainChime = () => {
   captionSound('chime', 2)
   return trainChime.play()
 }
+/** The passenger emergency alarm, looping while the train is held in the tunnel. */
+const ALARM_VOLUME = 0.32
+const alarm = sfx('emergency-alarm', 0, { loop: true })
+let alarmOn = false
+export function setAlarm(on: boolean) {
+  if (on === alarmOn) return
+  alarmOn = on
+  if (on) {
+    captionSound('alarm')
+    if (!alarm.playing()) alarm.play()
+    alarm.fade(alarm.volume() as number, ALARM_VOLUME, 600)
+  } else {
+    alarm.fade(alarm.volume() as number, 0, 1500)
+    alarm.once('fade', () => {
+      if (!alarmOn) alarm.stop()
+    })
+  }
+}
+
 /** Braking hard: the loud end of the arrival recording. */
 export function playTrainBrake(volume = 0.8) {
   captionSound('brake')
@@ -239,7 +284,7 @@ export function playTrainBrake(volume = 0.8) {
 
 /** Running rumble inside the carriage (stand-in loop cut from the arrival). Speed 0–1. */
 const TRAIN_RUN_VOLUME = 0.45
-const trainRun = sfx('train-run-loop', 0, { loop: true })
+const trainRun = sfx('train-moving-loop', 0, { loop: true }) // your recording, end crossfaded into its start so it loops seamlessly
 let trainRunOn = false
 export function setTrainRun(speed: number) {
   if (speed > 0.01 && !trainRunOn) {
@@ -265,7 +310,7 @@ export function setAudioPaused(paused: boolean) {
 
 /** Silences everything for good (leaving the game for the resources screen). */
 export function stopAllAudio(fadeMs = 800) {
-  ambienceOn = stationOn = escalatorOn = heartbeatOn = trainRunOn = false
+  ambienceOn = stationOn = escalatorOn = heartbeatOn = trainRunOn = figureStepsOn = alarmOn = false
   setAudioPaused(false)
   const master = Howler.volume()
   const start = performance.now()

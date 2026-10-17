@@ -6,8 +6,9 @@ import { BOARDING, FIGURE, PLATFORM_STORY as S, PLATFORM_TEXT as TEXT, TRAIN_ARR
 import { PLATFORM_TUBES, tubeLevel, tubeZ } from './PlatformLights'
 import { trainDoorCenters } from './Train'
 import { CCTV_FORWARD, CCTV_POSITION, cctvState } from './CCTV'
-import { playPresence, playTrainArrive, playTrainChime, setFootsteps, TRAIN_ARRIVE_STOPS_AT } from '../audio/sounds'
+import { playPresence, playTrainArrive, playTrainChime, setFigureSteps, setFootsteps, TRAIN_ARRIVE_STOPS_AT } from '../audio/sounds'
 import { Figure, isWalking, stopWalking, walkTo } from './Figure'
+import { autoWalk, seat, standing } from './FreeRoam'
 import { addFear, fearFocus, freezeForGood, resetFear, stepFear } from '../systems/fear'
 import { APPROACH, CAUGHT, FEAR, FIGURE_WALK } from '../data/fear'
 
@@ -65,6 +66,8 @@ export function PlatformStory() {
     moves: 0,
     hold: 0, // seconds doing the current ritual
     skip: false, // dev: N pressed
+    appearAt: 0, // when he arrives (seconds into the platform, picked once)
+    path: 'light' as 'light' | 'camera', // the one ritual: away from where he appeared
   })
   const tmp = useMemo(
     () => ({ frustum: new Frustum(), m: new Matrix4(), chest: new Vector3(), look: new Vector3(), to: new Vector3() }),
@@ -96,6 +99,8 @@ export function PlatformStory() {
     () => () => {
       tubeLevel.length = 0
       cctvState.diesAt = -1
+      cctvState.dead = false
+      setFigureSteps(0)
       const g = useGame.getState()
       resetFear()
       g.setInputLocked(false)
@@ -115,11 +120,9 @@ export function PlatformStory() {
       game0.setCheckpoint('platform') // Try again from here starts on the platform
       s.started = true
       s.since = now
-      // he's already here, waiting in the dark with his eyes shut (the far dark stretch to begin with)
-      const first = S.lurkSpots[3]
-      fig.position.set(first.x, FLOOR_Y, first.z)
-      fig.userData.eyesOpen = false
-      fig.visible = true
+      // nobody here yet: he arrives in a flicker a little later
+      fig.visible = false
+      fig.userData.eyesOpen = true
     }
     if (!s.started) return
     const t = now - s.since
@@ -148,9 +151,9 @@ export function PlatformStory() {
     }
 
     // The bright light (while it works) and the camera (while you need it) are yours: he keeps clear of them
-    const brightAlive = !['dying', 'dark', 'waitTrain', 'train', 'board', 'boarding'].includes(s.beat)
+    const brightAlive = s.path === 'light' && !['dying', 'dark', 'waitTrain', 'train', 'board', 'boarding'].includes(s.beat)
     const brightZ = tubeZ(S.brightTube)
-    const cameraNeeded = ['lurk', 'appear', 'presence', 'camera'].includes(s.beat)
+    const cameraNeeded = s.path === 'camera' && ['lurk', 'appear', 'presence', 'camera'].includes(s.beat)
     const zones: { z: number; r: number }[] = []
     if (brightAlive) zones.push({ z: brightZ, r: FIGURE.brightKeepOut })
     if (cameraNeeded) zones.push({ z: CCTV_POSITION.z, r: FIGURE.cameraKeepOut })
@@ -159,19 +162,8 @@ export function PlatformStory() {
       return z
     }
     // where you're meant to be heading right now (he never stands in the way)
-    const goal = s.beat === 'camera' ? CCTV_POSITION.z : s.beat === 'light' || s.beat === 'cameraAfter' ? brightZ : null
+    const goal = s.beat === 'camera' ? CCTV_POSITION.z : s.beat === 'light' ? brightZ : null
 
-    /** Where along the platform is `fromMe` metres from you, on his side (kept out of the light). */
-    const spotFromMe = (fromMe: number) => {
-      const side = Math.sign((fig?.position.z ?? me.z) - me.z) || 1
-      return MathUtils.clamp(outOfLight(me.z + side * fromMe, side), PLATFORM_Z[0], PLATFORM_Z[1])
-    }
-    /** Puts him there at once (only in the dark, when you can't see it happen). */
-    const placeAt = (fromMe: number) => {
-      if (!fig) return
-      stopWalking(fig)
-      fig.position.set(FIGURE.lane, FLOOR_Y, spotFromMe(fromMe))
-    }
 
     // Horizontal distance to him: for walking at him and for him reaching you
     const near = fig?.visible ? Math.hypot(me.x - fig.position.x, me.z - fig.position.z) : Infinity
@@ -179,10 +171,13 @@ export function PlatformStory() {
     Object.assign(fearFocus, fig?.visible && s.revealed ? { active: true, x: fig.position.x, y: fig.position.y + 1.68, z: fig.position.z } : { active: false })
 
     // How far YOU just moved toward him (him walking toward you doesn't count)
+    // (where you stand, not the camera: its tremble, and sitting down or standing up, don't count)
     let towardHim = 0
-    if (fig && s.lastMe && s.revealed) {
-      tmp.to.set(fig.position.x - me.x, 0, fig.position.z - me.z).normalize()
-      towardHim = Math.max(0, (me.x - s.lastMe.x) * tmp.to.x + (me.z - s.lastMe.z) * tmp.to.z)
+    if (fig && s.lastMe && s.revealed && !seat.active) {
+      const dx = standing.x - s.lastMe.x
+      const dz = standing.z - s.lastMe.z
+      tmp.to.set(fig.position.x - standing.x, 0, fig.position.z - standing.z).normalize()
+      if (Math.hypot(dx, dz) < 0.25) towardHim = Math.max(0, dx * tmp.to.x + dz * tmp.to.z)
     }
     if (towardHim > 0.001) s.approachedAt = now
 
@@ -198,17 +193,20 @@ export function PlatformStory() {
       s.closed += towardHim
       if (s.closed >= APPROACH.approachStep) {
         s.closed = 0
-        // he answers with a step of his own, but never closes the last stretch himself
+        // he answers with a step of his own (never the last stretch, and never back: already close, he holds his ground)
         const toward = Math.max(APPROACH.holdOff, near - APPROACH.stepToward)
-        // straight at you (but never into the bright light while it works)
-        const k = toward / Math.max(near, 0.001)
-        const z = outOfLight(me.z + (fig.position.z - me.z) * k, Math.sign(fig.position.z - me.z) || 1)
-        walkTo(fig, me.x + (fig.position.x - me.x) * k, z, FIGURE_WALK.toward)
+        if (toward >= near - 0.05) stopWalking(fig)
+        else {
+          // straight at you (but never into the bright light while it works)
+          const k = toward / Math.max(near, 0.001)
+          const z = outOfLight(me.z + (fig.position.z - me.z) * k, Math.sign(fig.position.z - me.z) || 1)
+          walkTo(fig, me.x + (fig.position.x - me.x) * k, z, FIGURE_WALK.toward)
+        }
         addFear(APPROACH.fearJump)
         s.lastMove = now
       }
     } else s.closed = 0
-    s.lastMe = (s.lastMe ?? new Vector3()).copy(me)
+    s.lastMe = (s.lastMe ?? new Vector3()).set(standing.x, 0, standing.z)
 
     /**
      * He walks the platform: slowly, to a spot a set distance from you (closer
@@ -221,18 +219,33 @@ export function PlatformStory() {
       const band = FIGURE.patrol[s.beat as keyof typeof FIGURE.patrol]
       if (!band) return
       // in your way? (between you and where you're heading) — move on past it
-      if (goal !== null && !s.clearing) {
+      // in your way (between you and where you're heading)? He won't walk through the
+      // light to get clear: he waits, and the moment you look away he's past it
+      if (goal !== null) {
         const lo = Math.min(me.z, goal) - 1
         const hi = Math.max(me.z, goal) + 1
         if (fig.position.z > lo && fig.position.z < hi) {
-          const beyond = goal + Math.sign(goal - me.z || 1) * (FIGURE.cameraKeepOut + 3)
-          walkTo(fig, FIGURE.lane, MathUtils.clamp(beyond, PLATFORM_Z[0], PLATFORM_Z[1]), FIGURE_WALK.creep)
-          s.clearing = true
+          if (!inView) {
+            const beyond = goal + Math.sign(goal - me.z || 1) * (FIGURE.cameraKeepOut + 3)
+            stopWalking(fig)
+            fig.position.set(FIGURE.lane, FLOOR_Y, MathUtils.clamp(beyond, PLATFORM_Z[0], PLATFORM_Z[1]))
+          } else if (isWalking(fig)) stopWalking(fig)
           return
         }
       }
+      // standing in the light (it came on with him in it): step out to its nearer edge
+      const inZone = zones.find(({ z: c, r }) => Math.abs(fig.position.z - c) < r)
+      if (inZone && !isWalking(fig)) {
+        const out = inZone.z + (Math.sign(fig.position.z - inZone.z) || 1) * (inZone.r + 0.3)
+        walkTo(fig, FIGURE.lane, MathUtils.clamp(out, PLATFORM_Z[0], PLATFORM_Z[1]), FIGURE_WALK.creep)
+        return
+      }
       if (isWalking(fig)) return
-      s.clearing = false
+      // you've come close: he doesn't back away, he stands his ground until you go
+      if (near < band[0]) {
+        s.restUntil = 0
+        return
+      }
       if (s.restUntil === 0) s.restUntil = now + FIGURE.patrolRest[0] + Math.random() * (FIGURE.patrolRest[1] - FIGURE.patrolRest[0])
       if (now < s.restUntil) return
       s.restUntil = 0
@@ -245,9 +258,10 @@ export function PlatformStory() {
         z = MathUtils.clamp(z, PLATFORM_Z[0], PLATFORM_Z[1])
         if (goal !== null && z > Math.min(me.z, goal) - 1 && z < Math.max(me.z, goal) + 1) continue
         if (Math.abs(z - me.z) < band[0] * 0.8) continue
+        const from = fig.position.z
+        if (zones.some(({ z: c, r }) => Math.min(from, z) < c + r && Math.max(from, z) > c - r)) continue // would cross it
         walkTo(fig, FIGURE.lane + (Math.random() - 0.5) * 0.8, z, FIGURE_WALK.creep)
         s.lastMove = now
-        if (!inView && s.moves++ % 3 === 0) playPresence('steps') // sometimes you hear him moving
         break
       }
     }
@@ -256,83 +270,40 @@ export function PlatformStory() {
 
     switch (s.beat) {
       case 'lurk': {
-        // You found him: close enough, looking his way. His eyes open.
-        // (or you've backed right into him without looking)
-        // Before you find him: the keys from the street, somewhere close
-        if (!s.keysHeard && !inView && near < S.keysDistance) {
-          s.keysHeard = true
-          playPresence('keys')
-        }
-        if ((inView && dist < S.revealDistance) || near < 4) {
-          reveal()
-          s.seenAt = now
-          s.appearedAt = now
-          game.setThought(s.keysHeard ? TEXT.firstSeenKeys : TEXT.firstSeen)
-          go('presence', now)
-          break
-        }
-        // While you explore, he slips (unseen) into a dark spot ahead of where you're heading
-        if (fig && now - s.lurkPicked > S.lurkRepick) {
-          s.lurkPicked = now
-          const moved = me.z - s.lurkLastZ
-          s.lurkLastZ = me.z
-          camera.getWorldDirection(tmp.look)
-          const heading = Math.abs(moved) > 0.3 ? Math.sign(moved) : Math.sign(tmp.look.z) || 1
-          tmp.chest.set(fig.position.x, FLOOR_Y + 1.3, fig.position.z)
-          const hiddenNow = !tmp.frustum.containsPoint(tmp.chest)
-          if (hiddenNow) {
-            let best: { x: number; z: number } | null = null
-            let bestScore = Infinity
-            for (const spot of S.lurkSpots) {
-              const d = Math.hypot(spot.x - me.x, spot.z - me.z)
-              if (d < S.lurkRange.min || d > S.lurkRange.max) continue
-              if ((spot.z - me.z) * heading < 0) continue // only ahead of you
-              tmp.chest.set(spot.x, FLOOR_Y + 1.3, spot.z)
-              if (tmp.frustum.containsPoint(tmp.chest)) continue // never pop into view
-              const score = Math.abs(d - S.lurkRange.ideal)
-              if (score < bestScore) {
-                bestScore = score
-                best = spot
-              }
-            }
-            if (best) fig.position.set(best.x, FLOOR_Y, best.z)
-          }
-        }
-        // Never found him: he comes to you, under a light you're looking at
-        if (t > S.lurkTime || s.skip) {
-          const { min, max, ideal } = S.appearDistance
-          let best = -1
-          let bestScore = Infinity
-          for (let i = 0; i < TUBES; i++) {
-            if (PLATFORM_TUBES.dead.includes(i) || i === S.brightTube) continue
-            tmp.chest.set(PLATFORM_TUBES.x, FLOOR_Y + 1.3, tubeZ(i))
-            const d = Math.abs(tubeZ(i) - me.z)
-            const visible = tmp.frustum.containsPoint(tmp.chest) && d >= min && d <= max
-            const score = Math.abs(d - ideal) + (visible ? 0 : 1000)
-            if (score < bestScore) {
-              bestScore = score
-              best = i
-            }
-          }
-          s.appearTube = best
+        // nobody yet; then a light flickers somewhere away from the rituals, and he's under it
+        s.appearAt ||= S.appearAfter[0] + Math.random() * (S.appearAfter[1] - S.appearAfter[0])
+        if (t > s.appearAt || s.skip) {
+          const [lo, hi] = S.spawnDistance
+          const away = (i: number) => Math.abs(tubeZ(i) - me.z)
+          const ok = S.spawnTubes.filter((i) => away(i) >= lo && away(i) <= hi)
+          const beyond = S.spawnTubes.filter((i) => away(i) >= lo).sort((a, b) => away(a) - away(b))
+          const pool = ok.length ? ok : beyond.length ? beyond.slice(0, 1) : [...S.spawnTubes].sort((a, b) => away(b) - away(a)).slice(0, 1)
+          s.appearTube = pool[Math.floor(Math.random() * pool.length)]
+          s.path = tubeZ(s.appearTube) < S.ritualSplitZ ? 'light' : 'camera' // the ritual at the other end from him
           go('appear', now)
         }
         break
       }
 
       case 'appear': {
-        // the light stutters, goes out, and he's there when it comes back
-        const stutter = 0.5
+        // the light above the spot stutters on and off; he's standing under it, and you turn to him
         const i = s.appearTube
-        tubeLevel[i] = t < stutter ? (Math.sin(t * 60) > 0 ? 1 : 0.1) : t < stutter + S.appearDarkTime ? 0 : 1
-        if (t > stutter && fig && !s.revealed) {
-          const away = Math.sign(tubeZ(i) - me.z) || 1
-          fig.position.set(FIGURE.lane, FLOOR_Y, MathUtils.clamp(tubeZ(i) + away * S.appearBehindLight, PLATFORM_Z[0], PLATFORM_Z[1]))
+        const dead = PLATFORM_TUBES.dead.includes(i)
+        const flickering = t < S.appearFocus + 0.6
+        tubeLevel[i] = flickering ? (Math.sin(t * 38) + Math.sin(t * 9.3) > 0.2 ? 1 : 0.08) : dead ? 0 : 1
+        if (fig && !s.revealed) {
+          fig.position.set(FIGURE.lane, FLOOR_Y, tubeZ(i))
+          fig.userData.eyesOpen = true
+          fig.visible = true
           reveal()
+          playPresence('keys') // the keys from the street
+          game.setThought(TEXT.firstSeen)
         }
-        if (t > stutter + S.appearDarkTime) {
+        if (fig && t < S.appearFocus) autoWalk.face = Math.atan2(fig.position.x - me.x, fig.position.z - me.z)
+        if (t >= S.appearFocus && !flickering) {
+          autoWalk.face = null
           s.appearedAt = now
-          if (!inView) playPresence('cough') // facing away: you hear him instead
+          s.seenAt = now
           go('presence', now)
         }
         break
@@ -344,9 +315,15 @@ export function PlatformStory() {
           game.setThought(TEXT.firstSeen)
         }
         if ((s.seenAt >= 0 && now - s.seenAt > S.ritualDelay) || now - s.appearedAt > S.ritualLatest || s.skip) {
-          game.setThought(TEXT.cameraNudge)
-          game.setCaption(TEXT.camera)
-          go('camera', now)
+          if (s.path === 'camera') {
+            game.setThought(TEXT.cameraNudge)
+            game.setCaption(TEXT.camera)
+            go('camera', now)
+          } else {
+            game.setThought(TEXT.lightNudge)
+            game.setCaption(TEXT.ritual)
+            go('light', now)
+          }
         }
         creep()
         break
@@ -362,7 +339,8 @@ export function PlatformStory() {
         s.hold = seen && facing ? s.hold + dt : Math.max(0, s.hold - dt)
         if (seen) calm = true // the camera's watching: it helps, for now
         if (s.hold >= S.cameraHold || s.skip) {
-          cctvState.diesAt = now // its light stutters and dies
+          cctvState.diesAt = now
+          cctvState.dead = true // its light stutters and dies, for good
           game.setCaption(null)
           go('cameraAfter', now)
         }
@@ -372,16 +350,12 @@ export function PlatformStory() {
 
       case 'cameraAfter':
         if (t > 1.2 && t - dt <= 1.2) game.setThought(TEXT.cameraDead)
-        if (t > S.cameraAfter) {
-          game.setThought(TEXT.lightNudge)
-          game.setCaption(TEXT.ritual)
-          go('light', now)
-        }
+        if (t > S.cameraAfter) go('dying', now) // the camera was the ritual: now the lights start to go
         creep()
         break
 
       case 'light': {
-        const under = Math.hypot(me.x - PLATFORM_TUBES.x, me.z - tubeZ(S.brightTube)) < S.brightRadius
+        const under = Math.abs(standing.z - tubeZ(S.brightTube)) < S.brightReach // anywhere in its pool, across the platform
         s.hold = under ? s.hold + dt : Math.max(0, s.hold - dt * 2)
         if (under) calm = true
         if (s.hold >= S.brightHold || s.skip) {
@@ -403,7 +377,11 @@ export function PlatformStory() {
         tubeLevel[S.brightTube] = Math.random() < 0.35 + (t / S.dyingTime) * 0.5 ? 0.05 : 1
         if (t > S.dyingTime) {
           tubeLevel[S.brightTube] = 0
-          placeAt(S.darkApproach) // in the dark, he's closer
+          // the light's gone: he walks toward you, straight through where it was
+          if (fig) {
+            const side = Math.sign(fig.position.z - me.z) || 1
+            walkTo(fig, FIGURE.lane, MathUtils.clamp(me.z + side * S.darkApproach, PLATFORM_Z[0], PLATFORM_Z[1]), FIGURE_WALK.toward)
+          }
           game.setThought(TEXT.dark)
           go('dark', now)
         }
@@ -414,7 +392,7 @@ export function PlatformStory() {
         const blackout = t < S.allDarkTime
         for (let i = 0; i < TUBES; i++) if (i !== S.brightTube) tubeLevel[i] = blackout ? 0 : 1
         if (t > S.darkTime) {
-          playTrainArrive() // faint rumble far down the tunnel, building
+          playTrainArrive(TRAIN_ARRIVAL.soundFrom) // faint rumble far down the tunnel, building
           go('waitTrain', now)
         }
         break
@@ -422,7 +400,7 @@ export function PlatformStory() {
 
       case 'waitTrain':
         creep()
-        if (t > TRAIN_ARRIVE_STOPS_AT - TRAIN_ARRIVAL.time) {
+        if (t > TRAIN_ARRIVE_STOPS_AT - TRAIN_ARRIVAL.soundFrom - TRAIN_ARRIVAL.time) {
           game.setTrainState('arriving')
           game.setThought(TEXT.trainHeard)
           go('train', now)
@@ -463,6 +441,10 @@ export function PlatformStory() {
     }
 
     // Fear: rises with him near and in sight, drains when you're safe. At the top you freeze.
+    // his footsteps: only while he's actually walking, louder the closer he is
+    const St = FIGURE.steps
+    setFigureSteps(fig?.visible && s.revealed && isWalking(fig) ? St.volume * MathUtils.clamp((St.far - near) / (St.far - St.near), 0, 1) : 0)
+
     const approaching = now - s.approachedAt < 0.8
     if (stepFear(now, dt, s.revealed ? near : Infinity, inView, calm, approaching) === 'panic' && fig && s.revealed) {
       s.strikes += 1
@@ -472,9 +454,11 @@ export function PlatformStory() {
         s.finalStrike = true
         walkTo(fig, me.x, me.z, FIGURE_WALK.toward)
       } else {
-        // he walks a little closer and stops; then you can move again
-        const k = Math.max(APPROACH.holdOff, near - FEAR.panicStep) / Math.max(near, 0.001)
-        walkTo(fig, me.x + (fig.position.x - me.x) * k, outOfLight(me.z + (fig.position.z - me.z) * k, 1), FIGURE_WALK.toward)
+        // he walks a little closer and stops (already close: he stays put, staring); then you can move again
+        const to = Math.max(APPROACH.holdOff, near - FEAR.panicStep)
+        const k = to / Math.max(near, 0.001)
+        if (to >= near - 0.05) stopWalking(fig)
+        else walkTo(fig, me.x + (fig.position.x - me.x) * k, outOfLight(me.z + (fig.position.z - me.z) * k, 1), FIGURE_WALK.toward)
       }
       game.setThought(FEAR.lastLines[Math.min(s.strikes, FEAR.lastLines.length) - 1])
     }

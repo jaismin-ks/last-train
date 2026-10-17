@@ -42,7 +42,7 @@ export const RIDE = {
   /** He starts at the far end of your carriage and steps this much closer each flicker. */
   heldStartGap: 15,
   heldStep: 3,
-  heldClosest: 3.4, // never closer than this on his own
+  heldClosest: 4.8, // never closer than this on his own (outside the 3.5 m you can't come within)
   /** Once he's in your carriage he paces it end to end, slowly. */
   pace: { speed: 0.7, restAtEnd: 2.5, stareFor: 3.5, aisleHalfWidth: 0.6, retreat: 0.9 }, // retreat: backing off during a ritual
   /** After he's as close as he gets, seconds before the train moves again. */
@@ -111,7 +111,7 @@ export const TUNNEL = {
 /** Lines and captions for the ride. */
 export const RIDE_TEXT = {
   boarded: 'Okay. I’m on.',
-  seenHim: 'He got on.',
+  unsure: 'I don’t know if he got on.', // a few seconds after boarding, before you see him
   pa: {
     text: '"We are being held due to a passenger emergency alarm activation at the next station. We apologise for the delay."',
     sub: 'Announcement',
@@ -123,12 +123,13 @@ export const RIDE_TEXT = {
     sub: 'Announcement',
   }),
   choice: { text: 'Get off here, or stay on', sub: 'Walk through the doors to get off' },
-  choiceThoughts: ['If I get off, he gets off.'], // at each station where you can get off (only Kingsway now)
+  choiceThoughts: ['Should I get off and walk from here?'], // at each station where you can get off (only Kingsway now)
   passing: {
     text: '"This train will not be stopping at Ashdale. Police are attending at the station."',
     sub: 'Announcement',
   },
   passed: 'Someone pressed the alarm.',
+  passedAfter: 'I wonder if there’s one on this train. I can’t see it.', // a few seconds later
   stayed: ['He’s in my carriage.', 'One more stop.'],
   lastStop: { text: 'Get off', sub: 'Walk through the doors' },
   doorsLabel: 'Doors close in',
@@ -139,7 +140,7 @@ export const STATIONS = {
   names: ['KINGSWAY', 'ASHDALE', 'ELM PARK'],
   passLeg: 2, // Ashdale: passed through, not stopped at
   /** Police lights on Ashdale's empty platform (model space: z along it). Red and blue, out of step. */
-  police: { colors: ['#ff2626', '#2a4cff'], at: [-14, -2, 10], x: 1.4, y: 1.6, intensity: 26, distance: 15, flashesPerSecond: 1.6, tubes: 0.35 },
+  police: { colors: ['#ff2626', '#2a4cff'], at: [-20, -10, 0, 10, 20], x: 1.2, y: 1.8, intensity: 70, distance: 22, flashesPerSecond: 1.6, tubes: 0.18 },
   doorsOpenFor: 9, // seconds to decide (Kingsway; Ashdale is passed through)
   /** Getting off: walk up to an open door (this close to its middle, along the carriage, and this far over toward it)... */
   doorReach: 0.75,
@@ -185,8 +186,8 @@ export const RIDE_RITUALS = {
   text: {
     nudge: 'I should tell someone where I am.',
     prompt: 'E|text Jess',
-    /** Already in the chat: Jess, a coworker, got home first and asked if Maya made the train (Maya's text answers it). */
-    earlier: { time: 'Today 11:41 PM', text: 'just got home! did u make the last train??' },
+    /** Already in the chat: Jess, Maya's roommate, is home and waiting for her. */
+    earlier: { time: 'Today 11:41 PM', text: 'i just got home, i’ll make dinner for us' },
     message: 'on the last train, 2nd car. text me back pls',
     perLetter: 0.07,
     hold: 2.5, // after "Not Delivered"

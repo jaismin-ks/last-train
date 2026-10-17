@@ -53,7 +53,7 @@ export function PlatformLights() {
     () =>
       tubes.map((_, i) =>
         T.dead.includes(i)
-          ? new MeshBasicMaterial({ color: '#1c2420' })
+          ? new MeshBasicMaterial({ color: DEAD_COLOR, toneMapped: false })
           : new MeshBasicMaterial({ color: i === T.bright.index ? T.bright.color : T.color, toneMapped: false, transparent: true }),
       ),
     [tubes, T],
@@ -65,7 +65,14 @@ export function PlatformLights() {
   useFrame(({ clock }) => {
     const t = clock.elapsedTime
     tubes.forEach((_, i) => {
-      if (T.dead.includes(i)) return
+      if (T.dead.includes(i)) {
+        // out, unless the story flickers it on (he appears under it)
+        const level = (tubeLevel[i] ?? 0) * (on ? 1 : 0)
+        const l = lights.current[i]
+        if (l) l.intensity = T.intensity * level
+        mats[i].color.set(level > 0.3 ? T.color : DEAD_COLOR)
+        return
+      }
       const r = hash(Math.floor(t * 14) + i * 50)
       const flicker = T.flicker.includes(i) ? (r < 0.18 ? 0.04 : r < 0.3 ? 0.45 : 1) : 1
       const level = (tubeLevel[i] ?? 1) * flicker * (on ? 1 : 0)
@@ -104,7 +111,7 @@ export function PlatformLights() {
                 <cylinderGeometry args={[0.01, 0.01, rodLength, 6]} />
               </mesh>
             ))}
-            {!T.dead.includes(i) && (
+            {(
               <pointLight
                 ref={(el) => (lights.current[i] = el)}
                 position={[0, -0.15, 0]}
@@ -120,6 +127,8 @@ export function PlatformLights() {
     </>
   )
 }
+
+const DEAD_COLOR = '#1c2420'
 
 /** z of tube `i` along the platform. */
 export const tubeZ = (i: number) => PLATFORM_TUBES.from + i * PLATFORM_TUBES.spacing

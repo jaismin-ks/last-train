@@ -30,7 +30,7 @@ const BODY_AT = new Vector3(-0.28, 0.06, -0.03)
  * State the story drives: the LED blinks red until `diesAt` (clock time),
  * then stutters and goes dark for good.
  */
-export const cctvState = { diesAt: -1 }
+export const cctvState = { diesAt: -1, dead: false }
 
 const yaw = MathUtils.degToRad(C.yawDeg)
 const toWorld = (local: Vector3) =>
@@ -82,11 +82,17 @@ export function CCTV() {
     })
   }, [scene])
 
-  useFrame(({ clock }) => {
+  const stutter = useRef(0) // seconds since it died (a last stutter, then nothing)
+  useFrame(({ clock }, dt) => {
     const t = clock.elapsedTime
     let on: boolean
-    if (cctvState.diesAt < 0 || t < cctvState.diesAt) on = t % C.blinkEvery < C.blinkEvery * 0.6
-    else on = t - cctvState.diesAt < 0.9 && Math.random() < 0.4 // a last stutter, then nothing
+    if (!cctvState.dead) {
+      stutter.current = 0
+      on = t % C.blinkEvery < C.blinkEvery * 0.6
+    } else {
+      stutter.current += dt
+      on = stutter.current < 0.9 && Math.random() < 0.4
+    }
     led.color.set(on ? C.ledColor : '#1a0504')
     glow.opacity = on ? C.glowStrength : 0
     if (light.current) light.current.intensity = on ? C.lightIntensity : 0

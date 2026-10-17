@@ -1,4 +1,6 @@
+import { useState } from 'react'
 import { useGame } from './store'
+import { LoadingScreen } from './ui/LoadingScreen'
 import { ContentWarning } from './ui/ContentWarning'
 import { StartScreen } from './ui/StartScreen'
 import { FilmGrain } from './ui/FilmGrain'
@@ -11,6 +13,9 @@ import { DevPanel } from './ui/DevPanel'
 
 function Screen() {
   const phase = useGame((s) => s.phase)
+  // everything downloads first (dev ?phase= links skip straight in)
+  const [loaded, setLoaded] = useState(phase !== 'warning')
+  if (!loaded) return <LoadingScreen onReady={() => setLoaded(true)} />
   if (phase === 'warning') return <ContentWarning />
   if (phase === 'title' || phase === 'start') return <StartScreen /> // title and Begin are one screen
   if (phase === 'epilogue') return <Ending />

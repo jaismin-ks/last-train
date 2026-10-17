@@ -33,6 +33,22 @@ export const PLATFORM_STORY = {
   lurkRepick: 1.2,
   /** Get this close to him (unseen) and you hear his keys, like on the street. */
   keysDistance: 18,
+  /**
+   * How he arrives: this long after you reach the platform, a light flickers
+   * at one of these tubes (both dark stretches and both far ends, well away from
+   * the camera and the brightest light) and he's standing under it. Your view
+   * turns to him wherever you are. Picks one at least `spawnMinDistance` from you.
+   */
+  appearAfter: [6, 12] as [number, number], // seconds (random each time), so where you are when he comes varies
+  spawnTubes: [0, 1, 5, 6],
+  /**
+   * One ritual, on the far side from him: he appears at the camera end (before
+   * this z) → the light; at the light end → the camera (and then the light dies anyway).
+   */
+  ritualSplitZ: 55,
+  spawnDistance: [10, 60], // picks at random among the spots this far from you
+  /** How long your view is held on him once he's there (seconds). */
+  appearFocus: 2.2,
   /** He reveals himself when he's on screen and you're this close (metres)... */
   revealDistance: 15,
   /** ...or after this many seconds, under a light you're looking at. */
@@ -50,9 +66,9 @@ export const PLATFORM_STORY = {
   appearDarkTime: 1.6,
 
   /** Seconds after you first see him before the first ritual prompt. */
-  ritualDelay: 6,
+  ritualDelay: 4,
   /** ...or this long after he appears, even if you never looked his way. */
-  ritualLatest: 16,
+  ritualLatest: 9,
 
   /**
    * CCTV ritual: stand where the camera can see you (in front of it, within
@@ -69,7 +85,7 @@ export const PLATFORM_STORY = {
   /** The brightest tube (index), where the ritual happens. */
   brightTube: 4,
   /** How close (metres) to stand under it, and for how long (seconds). */
-  brightRadius: 1.7,
+  brightReach: 2.6, // anywhere in its pool of light: this far along the platform from the tube, any spot across
   brightHold: 3.5,
   /** After the calm, seconds until the bright light starts dying. */
   calmTime: 6,
@@ -79,7 +95,7 @@ export const PLATFORM_STORY = {
   /** For this long at the start of the dark, every platform light is out (he moves then). */
   allDarkTime: 0.9,
   /** In the dark he closes in to this distance from you (metres). */
-  darkApproach: 7,
+  darkApproach: 6, // he walks there, straight through where the light was
 
   // The train is heard (faintly, far down the tunnel) as soon as the light dies;
   // it comes into view so that it stops exactly when the arrival sound does.
@@ -102,8 +118,8 @@ export const FIGURE = {
     camera: [9, 14],
     cameraAfter: [9, 13],
     light: [8, 13],
-    waitTrain: [6, 11],
-    train: [6, 10],
+    waitTrain: [6, 9],
+    train: [6, 9],
     board: [6, 10],
   } as Record<string, [number, number]>,
   patrolRest: [3, 7] as [number, number],
@@ -111,12 +127,16 @@ export const FIGURE = {
   brightKeepOut: 6.5,
   lane: -67.8, // his line along the platform (x), off-centre toward the wall but clear of the vending machine
   maxSeenDistance: 45, // further than this (lost in the fog) doesn't count as seeing him
+  /** His footsteps while he walks: full volume this close (metres), silent this far. */
+  steps: { volume: 0.22, near: 6, far: 26 },
 }
 
 /** Train arrival: slides in from the far end, slowing to a stop. */
 export const TRAIN_ARRIVAL = {
   distance: 150, // metres down the tunnel it starts from
   time: 12, // seconds from coming into view to stopping (the loud end of the arrival sound)
+  /** Start the arrival sound this far in (seconds): a shorter faint stretch, so the train comes sooner after the dark. */
+  soundFrom: 10,
   doorsAfter: 1.4, // seconds after stopping before the doors open
   headlight: {
     color: '#f4fff8',

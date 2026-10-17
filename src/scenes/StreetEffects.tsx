@@ -14,7 +14,7 @@ const FRINGE = new Vector2(STREET_EFFECTS.fringe, STREET_EFFECTS.fringe)
 
 export function StreetEffects() {
   return (
-    <EffectComposer>
+    <EffectComposer multisampling={0}>
       <HueSaturation saturation={STREET_EFFECTS.saturation} />
       <BrightnessContrast contrast={STREET_EFFECTS.contrast} />
       <ChromaticAberration offset={FRINGE} radialModulation modulationOffset={0.3} />

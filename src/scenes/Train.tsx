@@ -15,6 +15,7 @@ import {
   type Mesh,
   type MeshStandardMaterial,
   type PointLight,
+  type SpotLight,
 } from 'three'
 import { DRACO } from '../data/street'
 import markers from '../data/train-markers.json'
@@ -65,6 +66,10 @@ export function Train() {
   const doorsOpen = useGame((s) => s.trainDoorsOpen)
   const trainState = useGame((s) => s.trainState)
   const group = useRef<Group>(null)
+  const body = useRef<Group>(null)
+  const headSpot = useRef<SpotLight>(null)
+  const headSpill = useRef<PointLight>(null)
+  const headGlare = useRef<Group>(null)
   const lights = useRef<(PointLight | null)[]>([])
   const arrivedAt = useRef<number | null>(null)
   const startedAt = useRef<number | null>(null)
@@ -215,8 +220,15 @@ export function Train() {
 
   useFrame(({ clock }, dt) => {
     const g = group.current
+    // hidden: the body hides but its lights only go dark, so the scene's light count never
+    // changes (that would recompile every material: a stutter right as the train pulls in)
+    const shown = trainState !== 'hidden'
+    if (body.current) body.current.visible = shown
+    const headOn = trainState === 'arriving' || trainState === 'stopped'
+    if (headSpot.current) headSpot.current.intensity = headOn ? TRAIN_ARRIVAL.headlight.intensity : 0
+    if (headSpill.current) headSpill.current.intensity = headOn ? TRAIN_ARRIVAL.headlight.spill : 0
+    if (headGlare.current) headGlare.current.visible = headOn
     if (g) {
-      g.visible = trainState !== 'hidden'
       if (trainState === 'arriving') {
         if (startedAt.current === null) startedAt.current = clock.elapsedTime
         const k = Math.min(1, (clock.elapsedTime - startedAt.current) / TRAIN_ARRIVAL.time)
@@ -245,7 +257,7 @@ export function Train() {
     }
     for (const l of lights.current) {
       if (!l) continue
-      l.intensity = TRAIN.light.intensity * trainLights.level
+      l.intensity = shown ? TRAIN.light.intensity * trainLights.level : 0
       l.color.copy(NORMAL_COLOR).lerp(EMERGENCY_COLOR, trainLights.emergency)
     }
     for (const l of leaves) {
@@ -255,39 +267,41 @@ export function Train() {
   })
 
   return (
-    <group ref={group} visible={false}>
-      <primitive object={scene} />
-      {(trainState === 'arriving' || trainState === 'stopped') && (
-        <>
-          {/* headlights: a strong beam down the tunnel, plus spill onto the walls nearby */}
-          <primitive object={head.target} />
-          <spotLight
+    <group ref={group}>
+      <group ref={body} visible={false}>
+        <primitive object={scene} />
+      </group>
+      {/* headlights (lit while it pulls in and stands): a strong beam down the tunnel, plus spill onto the walls nearby */}
+      <primitive object={head.target} />
+      <spotLight
+            ref={headSpot}
             position={head.pos.toArray()}
             target={head.target}
             color={TRAIN_ARRIVAL.headlight.color}
-            intensity={TRAIN_ARRIVAL.headlight.intensity}
+            intensity={0}
             distance={TRAIN_ARRIVAL.headlight.distance}
             angle={0.75}
             penumbra={0.7}
             decay={1.4}
           />
           <pointLight
+            ref={headSpill}
             position={[head.x, head.y, head.lampZ - 1.5]}
             color={TRAIN_ARRIVAL.headlight.color}
-            intensity={TRAIN_ARRIVAL.headlight.spill}
+            intensity={0}
             distance={9}
             decay={2}
           />
-          {[-1, 1].map((side) => (
-            <sprite
-              key={side}
-              material={lampGlow}
-              scale={TRAIN_ARRIVAL.headlight.glare}
-              position={[head.x + side * TRAIN_ARRIVAL.headlight.spread, head.y, head.lampZ]}
-            />
-          ))}
-        </>
-      )}
+          <group ref={headGlare} visible={false}>
+            {[-1, 1].map((side) => (
+              <sprite
+                key={side}
+                material={lampGlow}
+                scale={TRAIN_ARRIVAL.headlight.glare}
+                position={[head.x + side * TRAIN_ARRIVAL.headlight.spread, head.y, head.lampZ]}
+              />
+            ))}
+          </group>
       {/* one light per carriage keeps the game light; markers.lights has 5 per car if needed */}
       {(markers.cars as [number, number, number][]).map((c) => [c[0], c[1] + 2.25, c[2]] as [number, number, number]).map((p, i) => (
         <pointLight key={i} ref={(el) => (lights.current[i] = el)} position={p} color={TRAIN.light.color} intensity={TRAIN.light.intensity} distance={TRAIN.light.distance} decay={2} />

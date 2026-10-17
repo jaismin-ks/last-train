@@ -1,6 +1,7 @@
 import { Canvas } from '@react-three/fiber'
 import { SheetProvider } from '@theatre/r3f'
-import { Suspense } from 'react'
+import { Suspense, useState } from 'react'
+import { PerformanceMonitor } from '@react-three/drei'
 import { sheets } from './theatre/project'
 import { useGame } from './store'
 import { PhoneIntro } from './scenes/PhoneIntro'
@@ -21,6 +22,13 @@ import type { RootState } from '@react-three/fiber'
 import { Station } from './scenes/Station'
 import { Ride } from './scenes/Ride'
 
+/**
+ * Rendering resolution (device pixel ratio). High-DPI screens cost 4x the pixels
+ * at 2x, so it's capped; and if the frame rate drops, it steps down (to 1, then
+ * 0.75) until the game runs smoothly, and back up when there's headroom.
+ */
+const DPR = { max: Math.min(typeof devicePixelRatio === 'number' ? devicePixelRatio : 1, 1.5), min: 0.75, step: 0.25 }
+
 /** The phone scene happens far below the street, hidden in the black fog. */
 const PHONE_RIG_Y = -300
 
@@ -29,6 +37,7 @@ export function Experience() {
   const paused = useGame((s) => s.paused)
   const attempt = useGame((s) => s.attempt)
   const three = useRef<RootState | null>(null)
+  const [dpr, setDpr] = useState(DPR.max)
   // Pausing switches the 3D loop off, and three/fiber resets its clock to zero when it
   // does (and again on resume). Every scene times its beats on that clock, so keep the
   // time it had when paused, and skip the time spent paused so nothing jumps.
@@ -59,7 +68,13 @@ export function Experience() {
       onCreated={(state) => {
         three.current = state
         if (import.meta.env.DEV) (window as unknown as { __three: typeof state }).__three = state // dev: lets tests inspect the camera
-      }} dpr={[1, 2]}>
+      }} dpr={dpr} gl={{ powerPreference: 'high-performance' }}>
+      <PerformanceMonitor
+        flipflops={4}
+        onDecline={() => setDpr((d) => Math.max(DPR.min, d - DPR.step))}
+        onIncline={() => setDpr((d) => Math.min(DPR.max, d + DPR.step))}
+        onFallback={() => setDpr(DPR.min)}
+      />
       <color attach="background" args={['#000']} />
       <Suspense fallback={null}>
         {showPhone && (

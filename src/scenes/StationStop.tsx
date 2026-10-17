@@ -93,6 +93,7 @@ export function StationStop({
 }) {
   const { scene } = useGLTF(STATION_MODEL, DRACO)
   const group = useRef<Group>(null)
+  const model = useRef<Group>(null)
   const tubeLights = useRef<(PointLight | null)[]>([])
   const flashes = useRef<(PointLight | null)[]>([])
   const C = STATIONS.police
@@ -132,10 +133,13 @@ export function StationStop({
   useFrame(({ clock }) => {
     const g = group.current
     if (!g) return
-    g.visible = Math.abs(offset.current) < 160
+    // far off: the model hides, but its lights only go dark (never hidden: changing how
+    // many lights a scene has makes every material recompile, a stutter on slow machines)
+    const near = Math.abs(offset.current) < 160
+    if (model.current) model.current.visible = near
     g.position.z = centreZ + offset.current
-    const on = police.current
-    for (const l of tubeLights.current) if (l) l.intensity = P.lightIntensity * (on ? C.tubes : 1)
+    const on = police.current && near
+    for (const l of tubeLights.current) if (l) l.intensity = near ? P.lightIntensity * (police.current ? C.tubes : 1) : 0
     // red and blue, alternating, a little out of step along the platform
     flashes.current.forEach((l, i) => {
       if (!l) return
@@ -146,8 +150,10 @@ export function StationStop({
   })
 
   return (
-    <group ref={group} position={[P.edgeX, P.floorY, centreZ]} visible={false}>
-      <primitive object={scene} />
+    <group ref={group} position={[P.edgeX, P.floorY, centreZ]}>
+      <group ref={model} visible={false}>
+        <primitive object={scene} />
+      </group>
       {/* fluorescent tubes under the ceiling, and their light */}
       {P.lights.map((z, i) => (
         <group key={z} position={[P.lightX, P.lightY, z]}>
