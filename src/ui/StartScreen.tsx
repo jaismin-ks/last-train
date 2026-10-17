@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useProgress } from '@react-three/drei'
 import { useGame } from '../store'
-import { startAmbience } from '../audio/sounds'
+import { startAmbience, unlockAudio } from '../audio/sounds'
 import s from './screens.module.css'
 
 /** If loading stalls (a file that never arrives), let them begin anyway after this long (seconds). */
@@ -33,6 +33,7 @@ export function StartScreen() {
   }, [])
   const ready = !active || progress >= 100 || waitedEnough
   const begin = () => {
+    unlockAudio()
     startAmbience() // outside ambience runs from the start (this click also unlocks audio)
     setPhase('phoneIntro')
   }

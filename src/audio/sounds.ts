@@ -81,6 +81,15 @@ const AMBIENCE_VOLUME = 0.18
 const ambience = new Howl({ src: ['/assets/audio/ambience/outside.mp3'], volume: 0, loop: true, preload: true })
 let ambienceOn = false
 
+/**
+ * Chrome starts web audio suspended until the player does something. Call this
+ * from a click or key press (Begin) so sound is definitely on from the start.
+ */
+export function unlockAudio() {
+  const ctx = Howler.ctx
+  if (ctx && ctx.state !== 'running') void ctx.resume()
+}
+
 /** Fades the ambience in (call once the phone has faded out). Safe to call twice. */
 export function startAmbience(fadeMs = 3000) {
   if (ambienceOn) return

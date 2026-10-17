@@ -91,7 +91,10 @@ function loadSettings(): Settings {
     soundCaptions: false,
   }
   try {
-    return { ...fallback, ...JSON.parse(localStorage.getItem(SETTINGS_KEY) ?? '{}') }
+    const saved: Settings = { ...fallback, ...JSON.parse(localStorage.getItem(SETTINGS_KEY) ?? '{}') }
+    // volume left at zero reads as "sound on" but plays nothing: show it as muted at full volume instead
+    if (!(saved.volume > 0)) return { ...saved, volume: 1, muted: true }
+    return saved
   } catch {
     return fallback
   }
