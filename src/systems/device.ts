@@ -8,9 +8,6 @@ export const isIOS =
   typeof navigator !== 'undefined' &&
   (/iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1))
 
-/** An iPhone (not iPad: iPadOS can go fullscreen properly). */
-export const isIPhone = typeof navigator !== 'undefined' && /iPhone|iPod/.test(navigator.userAgent)
-
 /** Opened from the Home Screen (no browser bars at all). */
 export const isStandalone =
   typeof matchMedia !== 'undefined' &&
@@ -30,7 +27,7 @@ const isPhone = isTouch && typeof screen !== 'undefined' && Math.min(screen.widt
 
 /**
  * Fullscreen where the browser allows it (Android Chrome does; iPhone Safari never
- * lets a page go fullscreen, so iPhones swipe the bars away or use Add to Home Screen).
+ * lets a page go fullscreen, so iPhones use Add to Home Screen for that).
  * Phones stay upright. Only works inside a tap, so it's called from taps.
  */
 export function goFullscreen() {
