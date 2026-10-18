@@ -6,6 +6,9 @@ export const isIOS =
   typeof navigator !== 'undefined' &&
   (/iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1))
 
+/** An iPhone (not iPad: iPadOS can go fullscreen properly). */
+export const isIPhone = typeof navigator !== 'undefined' && /iPhone|iPod/.test(navigator.userAgent)
+
 /** Opened from the Home Screen (no browser bars at all). */
 export const isStandalone =
   typeof matchMedia !== 'undefined' &&

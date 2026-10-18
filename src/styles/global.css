@@ -15,3 +15,7 @@ button { font: inherit; cursor: pointer; }
 
 /* phones: the game canvas takes the touches (no page panning or pinch-zoom over it) */
 canvas { touch-action: none; }
+
+/* iPhone, while asking for a swipe up: the page can scroll (that's what makes Safari tuck its bars away) */
+html.swipe-fullscreen, html.swipe-fullscreen body { height: auto; overflow: auto; }
+html.swipe-fullscreen body { min-height: calc(100vh + 240px); }
