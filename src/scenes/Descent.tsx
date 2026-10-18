@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from 'react'
-import { Preload } from '@react-three/drei'
 import { useFrame, useThree } from '@react-three/fiber'
 import { Color, Fog, MathUtils, PerspectiveCamera, Vector3 } from 'three'
 import { DESCENT, EYE_HEIGHT, FOG, NIGHT_LIGHT, PLAYER_START, STREET_ROUTE, COUNTDOWN } from '../data/street'
@@ -12,6 +11,7 @@ import { Player } from './Player'
 import { Countdown } from './Countdown'
 import { StreetEffects } from './StreetEffects'
 import { startAmbience } from '../audio/sounds'
+import { Warmup } from './Warmup'
 
 /** Street-level fog; the descent starts thicker and eases to this. */
 
@@ -96,7 +96,6 @@ export function Descent() {
   return (
     <>
       <NightSky intensity={sky} />
-      <Preload all />
       <SkyHaze opacity={sky} />
       {/* Placeholder night lighting until lamps and windows are lit */}
       <hemisphereLight args={[NIGHT_LIGHT.skyColor, NIGHT_LIGHT.groundColor, NIGHT_LIGHT.sky * sky]} />
@@ -112,6 +111,8 @@ export function Descent() {
       {phase === 'street' && <Player route={STREET_ROUTE} street />}
       {phase === 'street' && <Countdown {...COUNTDOWN.street} />}
       {running && <StreetEffects />}
+      {/* during the phone scene: in the background, so it's all ready for the descent; Try again on the street: a quick hold */}
+      <Warmup hold={phase === 'street'} />
     </>
   )
 }

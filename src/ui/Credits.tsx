@@ -1,56 +1,34 @@
 import { useEffect, useRef, useState } from 'react'
 import { CREDITS, CREDITS_INTRO, REFERENCES, type Credit } from '../data/credits'
 import { useGame } from '../store'
+import { isTouch } from '../systems/device'
 import s from './credits.module.css'
 
-/** How fast the credits roll (pixels per second). */
-const ROLL_SPEED = 38
-
 /**
- * Credits, rolled like the end of a film: the work on the left, the people on
- * the right, meeting at the centre. They roll up by themselves; scroll, drag
- * or press a key to take over.
+ * Credits like the end of a film, but read at your own pace: the work on the
+ * left, the people on the right, meeting at the centre. Starts at the top;
+ * a hint at the bottom says there's more until you get there.
  */
 export function Credits() {
   const setPhase = useGame((st) => st.setPhase)
   const page = useRef<HTMLElement>(null)
   const [atEnd, setAtEnd] = useState(false) // the scroll hint goes once you reach the bottom
 
-  // Roll upward until the reader takes over (or it reaches the end)
   useEffect(() => {
     const el = page.current
     if (!el) return
-    let rolling = !matchMedia('(prefers-reduced-motion: reduce)').matches
-    let last = performance.now()
-    let pos = 0
-    let raf = 0
-    const tick = (now: number) => {
-      const dt = Math.min(0.05, (now - last) / 1000)
-      last = now
-      if (rolling) {
-        pos += ROLL_SPEED * dt
-        el.scrollTop = pos
-        if (el.scrollTop + el.clientHeight >= el.scrollHeight - 1) rolling = false
-      }
-      setAtEnd(el.scrollTop + el.clientHeight >= el.scrollHeight - 80)
-      raf = requestAnimationFrame(tick)
-    }
-    raf = requestAnimationFrame(tick)
-    const stop = () => (rolling = false)
-    el.addEventListener('wheel', stop, { passive: true })
-    el.addEventListener('touchstart', stop, { passive: true })
-    window.addEventListener('keydown', stop)
+    const check = () => setAtEnd(el.scrollTop + el.clientHeight >= el.scrollHeight - 80)
+    check()
+    el.addEventListener('scroll', check, { passive: true })
+    window.addEventListener('resize', check)
     return () => {
-      cancelAnimationFrame(raf)
-      el.removeEventListener('wheel', stop)
-      el.removeEventListener('touchstart', stop)
-      window.removeEventListener('keydown', stop)
+      el.removeEventListener('scroll', check)
+      window.removeEventListener('resize', check)
     }
   }, [])
 
   return (
     <main ref={page} className={s.page}>
-      <div className={s.lead} />
       <header className={s.header}>
         <h1 className={s.title}>{CREDITS_INTRO.title}</h1>
         <p className={s.subtitle}>{CREDITS_INTRO.subtitle}</p>
@@ -62,9 +40,9 @@ export function Credits() {
       ))}
       <Section title="References" items={REFERENCES} />
 
-      {/* a quiet hint that there's more below (they roll by themselves, and you can scroll) */}
+      {/* a quiet hint that there's more below */}
       <div className={`${s.scrollHint} ${atEnd ? s.scrollHintGone : ''}`} aria-hidden>
-        <span>Scroll</span>
+        <span>{isTouch ? 'Swipe up for more' : 'Scroll for more'}</span>
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
           <path d="M6 9l6 6 6-6" />
         </svg>

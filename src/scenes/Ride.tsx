@@ -294,7 +294,6 @@ export function Ride() {
     ritual: 'none' as 'none' | 'offered' | 'doing' | 'done',
     ritualAt: 0, // when it was offered / started / finished
     ePressed: false,
-    textPending: false, // a text that didn't send: it goes through at the next station
     exitDoorZ: 0, // the door you got off through
     stoodAt: 0, // getting off early: when he stopped in front of you on the platform
     lookUntil: 0, // doors just opened behind you: you turn toward them until then
@@ -599,8 +598,6 @@ export function Ride() {
             if (game.ritual.phone?.kind === 'text' && game.ritual.phone.status !== 'failed')
               game.setRitual({ phone: { kind: 'text', typed: '', status: 'failed' } })
           } else finished = true
-          // it only goes through later if you actually hit send
-          if (finished && rt >= typedEnd) s.textPending = true
         } else if (kind === 'call') {
           const L = RIDE_RITUALS.call.lines
           const talkEnd = 1.2 + L.length * RIDE_RITUALS.call.perLine
@@ -803,11 +800,6 @@ export function Ride() {
               game.setThought(TEXT.choiceThoughts[s.leg - 1])
               s.countdown = STATIONS.doorsOpenFor
               game.startCountdown(s.countdown, TEXT.doorsLabel, '')
-            }
-            // a text that didn't send finally goes through, here where there's signal
-            if (s.textPending) {
-              s.textPending = false
-              setTimeout(() => useGame.getState().setThought(RIDE_RITUALS.text.deliveredThought), 2600)
             }
           })
         // Walk up to an open door and you step off onto the platform

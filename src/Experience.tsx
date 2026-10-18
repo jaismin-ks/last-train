@@ -1,7 +1,8 @@
 import { Canvas } from '@react-three/fiber'
 import { SheetProvider } from '@theatre/r3f'
 import { Suspense, useState } from 'react'
-import { PerformanceMonitor } from '@react-three/drei'
+import { PerformanceMonitor, useProgress } from '@react-three/drei'
+import { useLoad } from './systems/loadProgress'
 import { sheets } from './theatre/project'
 import { useGame } from './store'
 import { PhoneIntro } from './scenes/PhoneIntro'
@@ -32,6 +33,11 @@ import { Ride } from './scenes/Ride'
  */
 const SCREEN_DPR = typeof devicePixelRatio === 'number' ? devicePixelRatio : 1
 const DPR = { max: Math.min(SCREEN_DPR, 1.5), min: Math.min(SCREEN_DPR, 1), step: 0.25, phone: Math.min(SCREEN_DPR, 2) }
+
+// the loading and start screens show how the downloads are going (they don't load the 3D code themselves)
+const report = ({ active, progress, total }: ReturnType<typeof useProgress.getState>) => useLoad.setState({ active, progress, total })
+report(useProgress.getState())
+useProgress.subscribe(report)
 
 /** The phone scene happens far below the street, hidden in the black fog. */
 const PHONE_RIG_Y = -300

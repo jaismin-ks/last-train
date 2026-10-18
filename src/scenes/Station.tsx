@@ -201,8 +201,8 @@ export function Station() {
       <StreetEffects />
       {/* the real lights for the station's ceiling lights (see LightPool) */}
       <LightPool />
-      {/* last, so it sees everything above */}
-      <Warmup label={useGame.getState().checkpoint === 'platform' ? CAPTIONS.loading.platform : CAPTIONS.loading.station} />
+      {/* last, so it sees everything above; Try again on the platform: no card, it's quick */}
+      <Warmup label={free ? undefined : CAPTIONS.loading.station} />
     </>
   )
 }

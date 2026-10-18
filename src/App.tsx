@@ -1,15 +1,21 @@
-import { useState } from 'react'
+import { lazy, Suspense, useState } from 'react'
 import { useGame } from './store'
 import { LoadingScreen } from './ui/LoadingScreen'
 import { ContentWarning } from './ui/ContentWarning'
 import { StartScreen } from './ui/StartScreen'
 import { FilmGrain } from './ui/FilmGrain'
-import { Experience } from './Experience'
 import { Resources } from './ui/Resources'
 import { Ending } from './ui/Ending'
 import { Credits } from './ui/Credits'
 import { AudioSettings, Hud } from './ui/Hud'
 import { DevPanel } from './ui/DevPanel'
+
+/**
+ * The 3D part (three.js, the scenes) is most of the code: it comes in its own file,
+ * fetched right away, so the first screen shows without waiting for it.
+ */
+const experience = import('./Experience')
+const Experience = lazy(() => experience.then((m) => ({ default: m.Experience })))
 
 function Screen() {
   const phase = useGame((s) => s.phase)
@@ -21,7 +27,11 @@ function Screen() {
   if (phase === 'epilogue') return <Ending />
   if (phase === 'endCard') return <Resources />
   if (phase === 'credits') return <Credits />
-  return <Experience />
+  return (
+    <Suspense fallback={null}>
+      <Experience />
+    </Suspense>
+  )
 }
 
 export default function App() {

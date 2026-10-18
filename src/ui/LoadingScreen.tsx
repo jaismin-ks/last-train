@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useProgress } from '@react-three/drei'
+import { useLoad } from '../systems/loadProgress'
 import s from './screens.module.css'
 
 /** If a file never arrives, carry on anyway after this long (seconds). */
@@ -12,7 +12,7 @@ const SETTLE = 0.6
  * the moment the page opens), with a quiet bar and percentage. Then the game.
  */
 export function LoadingScreen({ onReady }: { onReady: () => void }) {
-  const { active, progress, total } = useProgress()
+  const { active, progress, total } = useLoad()
   const [waitedEnough, setWaitedEnough] = useState(false)
   const done = (total > 0 && !active && progress >= 100) || waitedEnough
   const shown = done ? 100 : Math.floor(progress)

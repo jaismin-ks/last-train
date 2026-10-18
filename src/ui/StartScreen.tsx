@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useProgress } from '@react-three/drei'
+import { useLoad } from '../systems/loadProgress'
 import { useGame } from '../store'
 import { startAmbience, unlockAudio } from '../audio/sounds'
 import { goFullscreen } from '../systems/device'
@@ -26,7 +26,7 @@ function Headphones() {
  */
 export function StartScreen() {
   const setPhase = useGame((st) => st.setPhase)
-  const { active, progress } = useProgress()
+  const { active, progress } = useLoad()
   const [waitedEnough, setWaitedEnough] = useState(false)
   useEffect(() => {
     const t = setTimeout(() => setWaitedEnough(true), LOAD_PATIENCE * 1000)
