@@ -157,12 +157,6 @@ export const STATIONS = {
    * along the platform toward you and stops stopAt metres off. You turn to
    * watch from turnAt; it cuts to black `hold` seconds after he's stopped.
    */
-  /**
-   * Getting off at your stop: you step out, turn back to the train, the chime
-   * and the doors close, and it pulls away with him still inside, wherever he
-   * was (seconds; windowX / windowAlong: where you turn to look).
-   */
-  lastStop: { turnAt: 1.3, chimeAt: 2.2, doorsAt: 2.8, leaveAt: 4.0, cutAt: 7.5, windowX: -72.55, windowAlong: 7 },
   follow: { appear: 0.6, turnAt: 1.4, fromX: -72.3, outX: -70.4, stepSpeed: 0.9, walkSpeed: 0.8, stopAt: 2.2, hold: 1.8, maxTime: 14 },
   /** Station model placement (three.js) and the extras we add to it. */
   model: {

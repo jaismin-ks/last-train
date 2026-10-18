@@ -298,7 +298,6 @@ export function Ride() {
     stoodAt: 0, // getting off early: when he stopped in front of you on the platform
     lookUntil: 0, // doors just opened behind you: you turn toward them until then
     passedAt: 0, // when the train cleared Ashdale
-    figRideZ: 0, // your stop: where he was when the doors closed (he leaves with the train)
     prevX: 0, // your x last frame (walking toward a door?)
     countdown: 0,
   })
@@ -881,26 +880,9 @@ export function Ride() {
           // you turn and keep him in view
           if (s.said.has('follows') && t > F.turnAt) autoWalk.face = Math.atan2(fig.position.x - me.x, fig.position.z - me.z)
         }
-        // your stop: turn back to the train; the doors close and it pulls away, taking him with it from wherever he is
-        const L = STATIONS.lastStop
-        if (!followed) {
-          const windowZ = s.exitDoorZ + L.windowAlong
-          if (t > L.turnAt) once('turnBack', () => (autoWalk.face = Math.atan2(L.windowX - me.x, windowZ - me.z)))
-          if (t > L.chimeAt) once('lastChime', () => playTrainChime())
-          if (t > L.doorsAt)
-            once('lastDoors', () => {
-              game.setTrainDoorsOpen(false)
-              playTrainDoors()
-              if (fig) {
-                stopWalking(fig) // he stays where he is in the carriage
-                s.figRideZ = fig.position.z
-              }
-            })
-          if (t > L.leaveAt) once('leaves', () => game.setTrainState('leaving'))
-          if (fig && s.said.has('lastDoors')) fig.position.z = s.figRideZ + trainLeave.z // he rides away with it
-        }
-        // on the platform, then black, the chime ringing over silence (followed: once he's stood facing you a moment)
-        const over = followed ? (s.stoodAt > 0 && now - s.stoodAt > F.hold) || t > F.maxTime : t > L.cutAt
+        // black, the chime ringing over silence: at your stop the moment you step off;
+        // followed, once he's stood facing you a moment
+        const over = followed ? (s.stoodAt > 0 && now - s.stoodAt > F.hold) || t > F.maxTime : true
         if (over) {
           game.setBlackout(1)
           stopAllAudio(50)
