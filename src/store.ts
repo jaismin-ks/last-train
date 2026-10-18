@@ -26,6 +26,7 @@ type GameState = {
   caption: { text: string; sub?: string } | null // instruction caption at the bottom of the screen
   thought: string | null // inner-thought line in her voice
   paused: boolean // pause menu open (Esc)
+  loading: string | null // a scene is getting ready on the graphics card: what the loading screen says ("Entering the station")
   stamina: number // 0–1, running energy
   trainDoorsOpen: boolean // platform-side train doors
   platformLightsOn: boolean // station lights (go dark later in the story)
@@ -58,6 +59,8 @@ type GameState = {
   setCaption: (caption: { text: string; sub?: string } | null) => void
   setThought: (thought: string | null) => void
   setPaused: (paused: boolean) => void
+  setLoading: (loading: string | null) => void
+  changeScene: (phase: Phase, label: string) => void
   setStamina: (stamina: number, running: boolean) => void
   setTrainDoorsOpen: (open: boolean) => void
   setPlatformLightsOn: (on: boolean) => void
@@ -108,6 +111,13 @@ function saveSettings(s: Settings) {
 }
 const settings = loadSettings()
 
+/**
+ * The loading card between scenes (seconds): it fades in on the black before the next
+ * scene is built (building it can lock up a slow computer, and nothing could show then),
+ * and stays up at least `least` so it never just flickers.
+ */
+export const LOADING_CARD = { fadeIn: 0.5, least: 1.2 }
+
 /** Dev only: start at any phase with ?phase=descent (etc.) in the URL. */
 const devStartPhase = import.meta.env.DEV
   ? (new URLSearchParams(location.search).get('phase') as Phase | null)
@@ -129,6 +139,7 @@ export const useGame = create<GameState>((set, get) => {
   caption: null,
   thought: null,
   paused: false,
+  loading: null,
   stamina: 1,
   trainDoorsOpen: false,
   platformLightsOn: true,
@@ -157,6 +168,13 @@ export const useGame = create<GameState>((set, get) => {
   setCaption: (caption) => set({ caption }),
   setThought: (thought) => set({ thought }),
   setPaused: (paused) => set({ paused }),
+  setLoading: (loading) => set({ loading }),
+  // from the black at the end of a scene: the card first, then the next scene (which clears it when it's ready, see Warmup)
+  changeScene: (phase, label) => {
+    if (get().loading === label) return // already on its way (called every frame of the fade's last moment)
+    set({ loading: label })
+    setTimeout(() => set({ phase }), LOADING_CARD.fadeIn * 1000)
+  },
   setStamina: (stamina, running) => set({ stamina, running }),
   setTrainDoorsOpen: (trainDoorsOpen) => set({ trainDoorsOpen }),
   setPlatformLightsOn: (platformLightsOn) => set({ platformLightsOn }),

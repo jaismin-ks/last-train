@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
 import { Frustum, MathUtils, Matrix4, Vector3, type Group } from 'three'
 import { useGame } from '../store'
+import { CAPTIONS } from '../data/captions'
 import { BOARDING, FIGURE, PLATFORM_STORY as S, PLATFORM_TEXT as TEXT, TRAIN_ARRIVAL } from '../data/platform'
 import { PLATFORM_TUBES, tubeLevel, tubeZ } from './PlatformLights'
 import { trainDoorCenters } from './Train'
@@ -434,7 +435,7 @@ export function PlatformStory() {
           game.setTrainDoorsOpen(false)
           game.setPlatformLightsOn(false)
           game.setInputLocked(false)
-          game.setPhase('ride')
+          game.changeScene('ride', CAPTIONS.loading.train)
         }
         break
       }

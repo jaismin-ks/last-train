@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
-import { Preload, useGLTF } from '@react-three/drei'
+import { useGLTF } from '@react-three/drei'
 import { Box3, DoubleSide, Vector3, type Mesh, type MeshStandardMaterial, type PerspectiveCamera } from 'three'
 import { COUNTDOWN, DRACO, SCENE_FADE } from '../data/street'
 import { useGame } from '../store'
@@ -21,6 +21,8 @@ import { CCTV } from './CCTV'
 import { SignalLamp } from './SignalLamp'
 import { Countdown } from './Countdown'
 import { StreetEffects } from './StreetEffects'
+import { LightPool } from './LightPool'
+import { Warmup } from './Warmup'
 
 const STATION_MODEL = '/assets/models/station.glb'
 
@@ -170,7 +172,6 @@ export function Station() {
   return (
     <>
       <color attach="background" args={['#010403']} />
-      <Preload all />
       <fog attach="fog" args={['#03110b', 5, 55]} />
       {/* Faint green fill so the darkness between lights isn't pure black */}
       <hemisphereLight args={['#2f6b4f', '#050807', 0.9]} />
@@ -180,8 +181,8 @@ export function Station() {
       <PlatformLights />
       <CCTV />
       <SignalLamp scene={scene} />
-      {/* Hidden until the story brings it in */}
-      <Train />
+      {/* Hidden until the story brings it in; its lights share the station's (see LightPool) */}
+      <Train pooled />
       {free && <PlatformStory />}
       {/* new clock for the last train; made it once you're on the platform */}
       {!free && <Countdown {...COUNTDOWN.station} />}
@@ -198,6 +199,10 @@ export function Station() {
       {free && <FreeRoam area={PLATFORM} collide={scene} start={free.at} startHeading={free.heading} />}
       {free && <Benches scene={scene} floorY={PLATFORM.floorY} />}
       <StreetEffects />
+      {/* the real lights for the station's ceiling lights (see LightPool) */}
+      <LightPool />
+      {/* last, so it sees everything above */}
+      <Warmup label={useGame.getState().checkpoint === 'platform' ? CAPTIONS.loading.platform : CAPTIONS.loading.station} />
     </>
   )
 }

@@ -22,6 +22,7 @@ import markers from '../data/train-markers.json'
 import { useGame } from '../store'
 import { TRAIN_ARRIVAL } from '../data/platform'
 import { playTrainDoors } from '../audio/sounds'
+import { PooledLight } from './LightPool'
 
 export const TRAIN_MODEL = '/assets/models/train.glb'
 /** Materials that really are see-through (the window glass). */
@@ -61,7 +62,7 @@ export const trainLeave = { z: 0 }
  * slows to a stop and opens its platform doors.
  * Open/close the doors by hand with useGame.getState().setTrainDoorsOpen(true/false).
  */
-export function Train() {
+export function Train({ pooled = false }: { pooled?: boolean }) {
   const { scene } = useGLTF(TRAIN_MODEL, DRACO)
   const doorsOpen = useGame((s) => s.trainDoorsOpen)
   const trainState = useGame((s) => s.trainState)
@@ -284,7 +285,8 @@ export function Train() {
             penumbra={0.7}
             decay={1.4}
           />
-          <pointLight
+          <PooledLight
+            pooled={pooled}
             ref={headSpill}
             position={[head.x, head.y, head.lampZ - 1.5]}
             color={TRAIN_ARRIVAL.headlight.color}
@@ -304,7 +306,7 @@ export function Train() {
           </group>
       {/* one light per carriage keeps the game light; markers.lights has 5 per car if needed */}
       {(markers.cars as [number, number, number][]).map((c) => [c[0], c[1] + 2.25, c[2]] as [number, number, number]).map((p, i) => (
-        <pointLight key={i} ref={(el) => (lights.current[i] = el)} position={p} color={TRAIN.light.color} intensity={TRAIN.light.intensity} distance={TRAIN.light.distance} decay={2} />
+        <PooledLight pooled={pooled} key={i} ref={(el) => (lights.current[i] = el)} position={p} color={TRAIN.light.color} intensity={TRAIN.light.intensity} distance={TRAIN.light.distance} decay={2} />
       ))}
     </group>
   )

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
-import { Preload, useGLTF } from '@react-three/drei'
+import { useGLTF } from '@react-three/drei'
 import {
   Frustum,
   MathUtils,
@@ -20,6 +20,8 @@ import {
 import { DRACO, SCENE_FADE, SEATED_EYE_MAX } from '../data/street'
 import { RIDE as R, RIDE_RITUALS, RIDE_TEXT as TEXT, SEATS, SIREN, STATIONS, TUNNEL } from '../data/ride'
 import { StationStop } from './StationStop'
+import { Warmup } from './Warmup'
+import { CAPTIONS } from '../data/captions'
 import { useGame } from '../store'
 import { playKeyTap, playLowBattery, playOwnKeys, playPresence, playTrainBrake, playTrainChime, playTrainDoors, setAlarm, setTrainRun, stopAllAudio } from '../audio/sounds'
 import { Train, TRAIN_MODEL, trainDoorCenters, trainLeave, trainLights } from './Train'
@@ -985,7 +987,6 @@ export function Ride() {
     <>
       <color attach="background" args={['#000']} />
       <fog attach="fog" args={['#000000', 4, 40]} />
-      <Preload all />
       <hemisphereLight ref={fill} args={['#1b2420', '#050505', FILL]} />
       <Train />
       <Tunnel speed={speed} station={station} />
@@ -993,6 +994,7 @@ export function Ride() {
       <Siren level={siren} />
       <Figure ref={figure} />
       <FreeRoam area={area} collide={train} start={start} startHeading={MathUtils.degToRad(R.start.headingDeg)} />
+      <Warmup label={CAPTIONS.loading.train} />
     </>
   )
 }

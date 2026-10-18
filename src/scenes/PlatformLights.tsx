@@ -1,5 +1,6 @@
 import { useMemo, useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
+import { PooledLight } from './LightPool'
 import { MeshBasicMaterial, MeshStandardMaterial, type PointLight } from 'three'
 import { useGame } from '../store'
 import { PLATFORM_STORY } from '../data/platform'
@@ -86,7 +87,7 @@ export function PlatformLights() {
   return (
     <>
       {Array.from({ length: Math.floor((T.to - T.from) / T.farWall.every) + 1 }, (_, k) => (
-        <pointLight
+        <PooledLight
           key={`wall-${k}`}
           position={[T.farWall.x, T.farWall.y, T.from + 4 + k * T.farWall.every]}
           color={T.farWall.color}
@@ -112,7 +113,7 @@ export function PlatformLights() {
               </mesh>
             ))}
             {(
-              <pointLight
+              <PooledLight
                 ref={(el) => (lights.current[i] = el)}
                 position={[0, -0.15, 0]}
                 color={bright ? T.bright.color : T.color}

@@ -2,6 +2,7 @@ import { useRef } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
 import { SCENE_FADE, SUBWAY_ENTRANCE } from '../data/street'
 import { useGame } from '../store'
+import { CAPTIONS } from '../data/captions'
 import { setFootsteps, stopAmbience } from '../audio/sounds'
 
 /**
@@ -11,14 +12,13 @@ import { setFootsteps, stopAmbience } from '../audio/sounds'
 export function SubwayInteract({ onEnter }: { onEnter: () => void }) {
   const camera = useThree((s) => s.camera)
   const setBlackout = useGame((s) => s.setBlackout)
-  const setPhase = useGame((s) => s.setPhase)
   const leaving = useRef<number | null>(null) // time the fade started
 
   useFrame(({ clock }) => {
     if (leaving.current !== null) {
       const k = Math.min(1, (clock.elapsedTime - leaving.current) / SCENE_FADE.out)
       setBlackout(k * k * (3 - 2 * k)) // smooth ease to black
-      if (k >= 1) setPhase('platform')
+      if (k >= 1) useGame.getState().changeScene('platform', CAPTIONS.loading.station)
       return
     }
     const d = Math.hypot(camera.position.x - SUBWAY_ENTRANCE.x, camera.position.z - SUBWAY_ENTRANCE.z)

@@ -9,6 +9,12 @@ const WALK_HINT = isTouch ? 'Push the right stick to walk  ·  all the way to ru
 const ROAM_HINT = isTouch ? 'Right stick to move  ·  drag with your other thumb to look' : 'WASD to move  ·  Mouse to look'
 
 export const CAPTIONS = {
+  /** On the black between scenes, while the next one gets ready (only seen if that takes a moment). */
+  loading: {
+    station: 'Entering the station',
+    platform: 'Back to the platform', // Try again on the platform
+    train: 'Boarding the train',
+  },
   phone: {
     unlock: { text: 'Swipe up to unlock your phone' },
     textMom: { text: "Text Mom that you're done for the night", sub: 'Tap the message field' },

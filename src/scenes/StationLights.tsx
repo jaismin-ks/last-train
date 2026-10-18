@@ -1,6 +1,7 @@
 import { useMemo, useRef } from 'react'
 import { useGame } from '../store'
 import { useFrame } from '@react-three/fiber'
+import { PooledLight } from './LightPool'
 import type { PointLight } from 'three'
 
 type V3 = [number, number, number]
@@ -75,10 +76,10 @@ export function StationLights({ route }: { route: V3[] }) {
   return (
     <>
       {STATION_LIGHT.escalator.map((p, k) => (
-        <pointLight key={`esc-${k}`} position={p} color={e.color} intensity={e.intensity} distance={e.distance} decay={2} />
+        <PooledLight key={`esc-${k}`} position={p} color={e.color} intensity={e.intensity} distance={e.distance} decay={2} />
       ))}
       {lights.map((l, k) => (
-        <pointLight
+        <PooledLight
           key={k}
           ref={(el) => (refs.current[k] = el)}
           position={l.pos}

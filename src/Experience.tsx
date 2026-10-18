@@ -18,6 +18,7 @@ import { RitualOverlay } from './ui/RitualOverlay'
 import { SoundCaption } from './ui/SoundCaption'
 import { StaminaBar } from './ui/StaminaBar'
 import { TouchControls } from './ui/TouchControls'
+import { SceneLoading } from './ui/SceneLoading'
 import { useEffect, useLayoutEffect, useRef } from 'react'
 import type { RootState } from '@react-three/fiber'
 import { Station } from './scenes/Station'
@@ -37,29 +38,35 @@ const PHONE_RIG_Y = -300
 
 export function Experience() {
   const phase = useGame((s) => s.phase)
-  const paused = useGame((s) => s.paused)
+  // also held while a scene gets ready (see Warmup)
+  const halted = useGame((s) => s.paused || s.loading !== null)
   const attempt = useGame((s) => s.attempt)
   const three = useRef<RootState | null>(null)
   const [dpr, setDpr] = useState(DPR.max)
-  // Pausing switches the 3D loop off, and three/fiber resets its clock to zero when it
-  // does (and again on resume). Every scene times its beats on that clock, so keep the
-  // time it had when paused, and skip the time spent paused so nothing jumps.
+  // Pausing (or a scene getting ready) switches the 3D loop off, and three/fiber resets its
+  // clock to zero when it does (and again on resume). Every scene times its beats on that
+  // clock, so keep the time it had when paused, and skip the time spent paused so nothing jumps.
   const pausedAt = useRef<number | null>(null)
   useEffect(
     () =>
       useGame.subscribe((s, prev) => {
-        if (s.paused && !prev.paused && three.current) pausedAt.current = three.current.clock.elapsedTime
+        const held = (g: typeof s) => g.paused || g.loading !== null
+        // (only the first time: one scene handing the hold to the next lets go for a moment)
+        if (held(s) && !held(prev) && three.current && pausedAt.current === null) pausedAt.current = three.current.clock.elapsedTime
       }),
     [],
   )
   // a layout effect: runs after the Canvas applies the new frameloop, before the next frame
   useLayoutEffect(() => {
     const clock = three.current?.clock
-    if (paused || !clock) return
+    // a frame still queued when the loop stops runs anyway, with the clock in milliseconds
+    // (every timer would jump): drop it
+    if (halted && three.current) three.current.internal.frames = 0
+    if (halted || !clock) return
     if (pausedAt.current !== null) clock.elapsedTime = pausedAt.current
     ;(clock as unknown as { oldTime: number }).oldTime = performance.now()
     pausedAt.current = null
-  }, [paused])
+  }, [halted])
   const showPhone = phase === 'phoneIntro'
   // Mounted early (hidden) so the street is ready the moment the descent starts
   const showStreet = phase === 'phoneIntro' || phase === 'descent' || phase === 'street'
@@ -67,7 +74,7 @@ export function Experience() {
   return (
     <>
     <Canvas camera={{ position: [0, PHONE_RIG_Y, 0.32], fov: 35, near: 0.01, far: 500 }}
-      frameloop={paused ? 'never' : 'always'}
+      frameloop={halted ? 'never' : 'always'}
       onCreated={(state) => {
         three.current = state
         if (import.meta.env.DEV) (window as unknown as { __three: typeof state }).__three = state // dev: lets tests inspect the camera
@@ -108,6 +115,7 @@ export function Experience() {
     <Prompt />
     <TouchControls />
     <Fader />
+    <SceneLoading />
     </>
   )
 }

@@ -1,5 +1,6 @@
 import { useMemo, useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
+import { PooledLight } from './LightPool'
 import { AdditiveBlending, CanvasTexture, MeshBasicMaterial, MeshStandardMaterial, SpriteMaterial, type PointLight } from 'three'
 
 type V3 = [number, number, number]
@@ -74,7 +75,7 @@ export function EscalatorLights() {
         </group>
       ))}
       {ESC.ends.map((e, i) => (
-        <pointLight
+        <PooledLight
           key={i}
           ref={(el) => (glows.current[i] = el)}
           position={[e.x, e.y + 0.3, ESC.lanes[1]]}

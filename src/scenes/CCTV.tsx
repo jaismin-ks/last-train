@@ -15,6 +15,7 @@ import {
 } from 'three'
 import { DRACO } from '../data/street'
 import { CCTV as C } from '../data/platform'
+import { PooledLight } from './LightPool'
 
 const CCTV_MODEL = '/assets/models/cctv.glb'
 
@@ -106,7 +107,7 @@ export function CCTV() {
           <sphereGeometry args={[0.018, 10, 8]} />
         </mesh>
         <sprite material={glow} scale={C.glowSize / C.scale} position={[-0.03, 0, 0]} />
-        <pointLight ref={light} position={[-0.12, 0, 0]} color={C.ledColor} intensity={C.lightIntensity} distance={2.5} decay={2} />
+        <PooledLight ref={light} position={[-0.12, 0, 0]} color={C.ledColor} intensity={C.lightIntensity} distance={2.5} decay={2} />
       </group>
     </group>
   )

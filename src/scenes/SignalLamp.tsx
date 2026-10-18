@@ -1,5 +1,6 @@
 import { useMemo } from 'react'
 import { Box3, MeshStandardMaterial, Vector3, type Mesh, type MeshStandardMaterial as Std, type Object3D } from 'three'
+import { PooledLight } from './LightPool'
 
 /**
  * The station model has a pair of red signal lamps (Base_154m_0) hanging near
@@ -48,7 +49,7 @@ export function SignalLamp({ scene }: { scene: Object3D }) {
       <mesh material={housing} position={[0, size.y / 2 + 0.05 + rod / 2, 0]}>
         <cylinderGeometry args={[0.015, 0.015, rod, 8]} />
       </mesh>
-      <pointLight color={SIGNAL.light.color} intensity={SIGNAL.light.intensity} distance={SIGNAL.light.distance} decay={2} />
+      <PooledLight color={SIGNAL.light.color} intensity={SIGNAL.light.intensity} distance={SIGNAL.light.distance} decay={2} />
     </group>
   )
 }
