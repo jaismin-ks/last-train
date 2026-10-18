@@ -2,10 +2,12 @@ import { useEffect, useState } from 'react'
 import { useGame } from '../store'
 import { isTouch } from '../systems/device'
 import { useThumbsAtBottom } from './TouchControls'
+import hud from './hud.module.css'
 
 /**
  * Small interaction hint above the caption: a key chip and a quiet word,
- * e.g. "E|text Jess" shows [E] text Jess. Fades in and out.
+ * e.g. "E|text Jess" shows [E] text Jess. On a phone it's a button instead
+ * ("TEXT JESS") that presses the key. Fades in and out.
  */
 export function Prompt() {
   const prompt = useGame((s) => s.prompt)
@@ -25,23 +27,23 @@ export function Prompt() {
     window.dispatchEvent(new KeyboardEvent('keyup', { code, key }))
   }
 
-  const tappable = isTouch && !!prompt && !!key
+  const button = isTouch && !!key
   return (
     <div
       aria-live="polite"
-      onPointerDown={tappable ? tap : undefined}
       style={{
         position: 'fixed',
-        left: '50%',
-        transform: 'translateX(-50%)', // only as wide as the hint, so the thumbs around it still walk and look
-        bottom: thumbs ? '24%' : '15%',
+        // only as wide as the hint, so the thumbs around it still walk and look;
+        // held upright the stick is under the right thumb, so the buttons go by the left one
+        left: thumbs ? '7%' : '50%',
+        transform: thumbs ? 'none' : 'translateX(-50%)',
+        bottom: thumbs ? '17%' : '15%',
         display: 'flex',
         justifyContent: 'center',
         alignItems: 'center',
         gap: 10,
-        padding: tappable ? '10px 14px' : 0,
         whiteSpace: 'nowrap',
-        pointerEvents: tappable ? 'auto' : 'none',
+        pointerEvents: 'none',
         zIndex: 5,
         color: 'rgba(230, 240, 235, 0.72)',
         fontFamily: 'var(--font-ui)',
@@ -52,7 +54,12 @@ export function Prompt() {
         transition: 'opacity 0.6s ease',
       }}
     >
-      {key && (
+      {button ? (
+        // only tappable while it's showing, not while it fades out
+        <button className={hud.touchButton} onPointerDown={tap} style={{ pointerEvents: prompt ? 'auto' : 'none' }}>
+          {label}
+        </button>
+      ) : key ? (
         <kbd
           style={{
             fontFamily: 'var(--font-ui)',
@@ -68,8 +75,8 @@ export function Prompt() {
         >
           {key}
         </kbd>
-      )}
-      <span>{label}</span>
+      ) : null}
+      {!button && <span>{label}</span>}
     </div>
   )
 }

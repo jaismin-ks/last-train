@@ -3,7 +3,7 @@ import { useGame } from '../store'
 import { isTouch, usePortrait } from '../systems/device'
 
 /**
- * Phones and tablets: a thumbstick bottom left (push to walk, all the way to run,
+ * Phones and tablets: a thumbstick bottom right (push to walk, all the way to run,
  * sideways to step) and drag anywhere else to look. They press the same keys and
  * move the same cursor the keyboard and mouse do, so the game itself doesn't change.
  */
@@ -11,11 +11,13 @@ const STICK = { radius: 56, deadZone: 0.35, side: 0.45, run: 0.92 }
 // across / upDown: how far you drag (px) to look from the middle to the edge of the view;
 // turnEdge: the cursor position (0–1 from the middle) where turning starts
 const LOOK = { across: 185, upDown: 85, turnEdge: 0.6 }
-/** Where the left thumb finds the stick: held upright it's the bottom of the screen. */
+/** Where the right thumb finds the stick: held upright it's the bottom of the screen. */
 const STICK_AREA = {
-  wide: { area: { width: '45%', height: '65%' }, rest: { left: '22%', bottom: '24%' } },
-  tall: { area: { width: '50%', height: '45%' }, rest: { left: '20%', bottom: '16%' } },
+  wide: { area: { width: '45%', height: '65%' }, rest: { right: '22%', bottom: '24%' } },
+  tall: { area: { width: '50%', height: '45%' }, rest: { right: '20%', bottom: '16%' } },
 }
+/** The look hint goes once you've looked around (for the whole visit). */
+let lookedAround = false
 const WALK_PHASES = ['street', 'platform', 'ride']
 
 /** Keep getting this finger's moves even if it slides off the pad (some browsers refuse; it still works without). */
@@ -86,7 +88,7 @@ function Stick() {
 
   return (
     <div
-      style={{ position: 'fixed', left: 0, bottom: 0, ...fit.area, zIndex: 4, touchAction: 'none' }}
+      style={{ position: 'fixed', right: 0, bottom: 0, ...fit.area, zIndex: 4, touchAction: 'none' }}
       onPointerDown={(e) => {
         id.current = e.pointerId
         capture(e)
@@ -121,6 +123,7 @@ function LookPad() {
   // a virtual cursor the drag moves: the game looks where it sits and turns near the edges
   const cursor = useRef({ x: innerWidth / 2, y: innerHeight / 2 })
   const last = useRef<{ x: number; y: number; id: number } | null>(null)
+  const [hint, setHint] = useState(!lookedAround)
   const send = () => window.dispatchEvent(new MouseEvent('mousemove', { clientX: cursor.current.x, clientY: cursor.current.y }))
   useEffect(() => {
     send()
@@ -131,34 +134,46 @@ function LookPad() {
   }, [])
 
   return (
-    <div
-      // everywhere below the corner buttons; the stick sits on top of it
-      style={{ position: 'fixed', left: 0, right: 0, top: '12%', bottom: 0, zIndex: 3, touchAction: 'none' }}
-      onPointerDown={(e) => {
-        last.current = { x: e.clientX, y: e.clientY, id: e.pointerId }
-        capture(e)
-      }}
-      onPointerMove={(e) => {
-        const l = last.current
-        if (!l || l.id !== e.pointerId) return
-        const c = cursor.current
-        // the same drag looks as far whichever way the phone is held
-        c.x = Math.min(innerWidth - 1, Math.max(0, c.x + ((e.clientX - l.x) * innerWidth) / 2 / LOOK.across))
-        c.y = Math.min(innerHeight - 1, Math.max(0, c.y + ((e.clientY - l.y) * innerHeight) / 2 / LOOK.upDown))
-        l.x = e.clientX
-        l.y = e.clientY
-        send()
-      }}
-      onPointerUp={() => {
-        last.current = null
-        // let go: stop turning, but keep looking where you were
-        const c = cursor.current
-        const half = innerWidth / 2
-        const off = (c.x - half) / half
-        if (Math.abs(off) > LOOK.turnEdge * 0.95) c.x = half + Math.sign(off) * LOOK.turnEdge * 0.95 * half
-        send()
-      }}
-      onPointerCancel={() => (last.current = null)}
-    />
+    <>
+      {/* until they've tried it: the other thumb looks around */}
+      {hint && (
+        <div style={{ position: 'fixed', left: '7%', bottom: '7%', maxWidth: '38%', zIndex: 3, pointerEvents: 'none', fontSize: 10, lineHeight: 1.6, letterSpacing: '0.2em', textTransform: 'uppercase', color: 'rgba(232,236,233,0.45)', textShadow: '0 0 10px rgba(0,0,0,0.9)' }}>
+          Drag with your other thumb to look around
+        </div>
+      )}
+      <div
+        // everywhere below the corner buttons; the stick sits on top of it
+        style={{ position: 'fixed', left: 0, right: 0, top: '12%', bottom: 0, zIndex: 3, touchAction: 'none' }}
+        onPointerDown={(e) => {
+          last.current = { x: e.clientX, y: e.clientY, id: e.pointerId }
+          capture(e)
+        }}
+        onPointerMove={(e) => {
+          const l = last.current
+          if (!l || l.id !== e.pointerId) return
+          const c = cursor.current
+          // the same drag looks as far whichever way the phone is held
+          c.x = Math.min(innerWidth - 1, Math.max(0, c.x + ((e.clientX - l.x) * innerWidth) / 2 / LOOK.across))
+          c.y = Math.min(innerHeight - 1, Math.max(0, c.y + ((e.clientY - l.y) * innerHeight) / 2 / LOOK.upDown))
+          l.x = e.clientX
+          l.y = e.clientY
+          send()
+          if (!lookedAround) {
+            lookedAround = true
+            setTimeout(() => setHint(false), 1200) // let them see it worked first
+          }
+        }}
+        onPointerUp={() => {
+          last.current = null
+          // let go: stop turning, but keep looking where you were
+          const c = cursor.current
+          const half = innerWidth / 2
+          const off = (c.x - half) / half
+          if (Math.abs(off) > LOOK.turnEdge * 0.95) c.x = half + Math.sign(off) * LOOK.turnEdge * 0.95 * half
+          send()
+        }}
+        onPointerCancel={() => (last.current = null)}
+      />
+    </>
   )
 }

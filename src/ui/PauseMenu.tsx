@@ -110,10 +110,10 @@ export function PauseMenu() {
           <span className={s.label}>Controls</span>
           {isTouch ? (
             <div className={s.controls}>
-              <kbd>Left thumb</kbd>
+              <kbd>Right thumb</kbd>
               <span>walk (push all the way to run, sideways to step)</span>
               <kbd>Drag</kbd>
-              <span>anywhere else to look around</span>
+              <span>with your other thumb to look around</span>
               <kbd>Prompts</kbd>
               <span>tap them (sit, text, call…)</span>
             </div>

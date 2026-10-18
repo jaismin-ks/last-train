@@ -1,12 +1,13 @@
 import { useGame } from '../store'
 import { RIDE_RITUALS } from '../data/ride'
 import s from './ritual.module.css'
+import hud from './hud.module.css'
 import { isTouch } from '../systems/device'
 
-/** How far up the screen the held phone reaches (px, with its put-away label), for text that must stay clear of it. */
-export const PHONE_CLEAR = 350
+/** How far up the screen the held phone reaches (px, with its put-away button), for text that must stay clear of it. */
+export const PHONE_CLEAR = 365
 
-/** On a phone there's no E: tapping the label above the phone puts it away. */
+/** On a phone there's no E: the button above the phone puts it away. */
 const putAway = () => {
   window.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyE', key: 'e' }))
   window.dispatchEvent(new KeyboardEvent('keyup', { code: 'KeyE', key: 'e' }))
@@ -32,8 +33,8 @@ export function RitualOverlay() {
             <span className={s.battery}>{battery}%</span>
           </div>
           {isTouch ? (
-            <button className={`${s.putAway} ${s.putAwayTap}`} onPointerDown={putAway}>
-              Tap to put away
+            <button className={`${hud.touchButton} ${s.putAwayButton}`} onPointerDown={putAway}>
+              Put away
             </button>
           ) : (
             <div className={s.putAway}>E · put away</div>

@@ -3,6 +3,7 @@ import { useGame } from '../store'
 import { ENDING } from '../data/ending'
 import { playKeyTap, playMessageIn, playMessageOut } from '../audio/sounds'
 import s from './ending.module.css'
+import { isTouch } from '../systems/device'
 
 const ms = (seconds: number) => seconds * 1000
 
@@ -94,6 +95,8 @@ export function Ending() {
           )}
         </div>
       )}
+      {/* the lines move on by themselves too, but say they can be hurried along */}
+      {step >= 1 && <p className={s.next}>{isTouch ? 'Tap' : 'Click'} to continue</p>}
       <button
         className={s.skip}
         onClick={(e) => {

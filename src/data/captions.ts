@@ -5,8 +5,8 @@
  */
 import { isTouch } from '../systems/device'
 
-const WALK_HINT = isTouch ? 'Push the left stick to walk  ·  all the way to run' : 'Hold W to keep walking  ·  Shift to run'
-const ROAM_HINT = isTouch ? 'Left stick to move  ·  drag to look' : 'WASD to move  ·  Mouse to look'
+const WALK_HINT = isTouch ? 'Push the right stick to walk  ·  all the way to run' : 'Hold W to keep walking  ·  Shift to run'
+const ROAM_HINT = isTouch ? 'Right stick to move  ·  drag with your other thumb to look' : 'WASD to move  ·  Mouse to look'
 
 export const CAPTIONS = {
   phone: {

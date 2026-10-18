@@ -77,3 +77,12 @@
 }
 
 @keyframes pulse { 50% { opacity: 0.45 } }
+
+/* Phones: the key prompts (sit, stand, text Jess…) and put-away are buttons to tap */
+.touchButton {
+  min-width: 128px; padding: 12px 22px;
+  border: 1px solid rgba(232, 236, 233, 0.5); background: rgba(0, 0, 0, 0.55); color: var(--text);
+  font-family: var(--font-ui); font-size: 11px; letter-spacing: 0.25em; text-transform: uppercase; white-space: nowrap;
+  touch-action: none; -webkit-tap-highlight-color: transparent; transition: background 0.15s, color 0.15s;
+}
+.touchButton:active { background: var(--text); color: #000; }
