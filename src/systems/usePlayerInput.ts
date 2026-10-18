@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { MathUtils } from 'three'
+import { isTouch } from './device'
 
 export type PlayerInput = {
   forward: boolean
@@ -31,6 +32,10 @@ export function usePlayerInput(enabled: boolean) {
     const onDown = key(true)
     const onUp = key(false)
     const onMove = (e: MouseEvent) => {
+      // on a phone the browser also sends a mouse move to wherever you tapped (a button at
+      // the edge of the screen then looked hard that way and kept turning): only the look
+      // pad's own moves count there
+      if (isTouch && e.isTrusted) return
       i.lookX = (e.clientX / window.innerWidth) * 2 - 1
       i.lookY = -((e.clientY / window.innerHeight) * 2 - 1)
     }

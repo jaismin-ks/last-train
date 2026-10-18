@@ -17,7 +17,7 @@ import {
   type PointLight,
   type SpotLight,
 } from 'three'
-import { DRACO, SCENE_FADE } from '../data/street'
+import { DRACO, SCENE_FADE, SEATED_EYE_MAX } from '../data/street'
 import { RIDE as R, RIDE_RITUALS, RIDE_TEXT as TEXT, SEATS, SIREN, STATIONS, TUNNEL } from '../data/ride'
 import { StationStop } from './StationStop'
 import { useGame } from '../store'
@@ -326,7 +326,7 @@ export function Ride() {
         changed: true,
         x: s.x - s.side * SEATS.sitInward, // a little in from the wall, over the cushion
         z: s.z,
-        eye: s.y + SEATS.eyeAboveSeat - R.area.floorY,
+        eye: Math.min(s.y + SEATS.eyeAboveSeat - R.area.floorY, SEATED_EYE_MAX),
         heading: s.side < 0 ? Math.PI / 2 : -Math.PI / 2, // facing across the carriage
         standX: CAR_X + s.side * SEATS.standFromCentre,
         standZ: s.z,
@@ -944,10 +944,10 @@ export function Ride() {
         ? null
         : s.ritual === 'offered'
           ? ritualCfg.prompt
-          : game.caption // announcements and choices come first: no sit / stand hint over them
-            ? null
-            : seat.active
-              ? SEATS.standPrompt
+          : seat.active
+            ? SEATS.standPrompt // always: on a phone it's the only way to get up (say, to get off)
+            : game.caption // announcements and choices come first: no sit hint over them
+              ? null
               : nearest
                 ? SEATS.sitPrompt
                 : null

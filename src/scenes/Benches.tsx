@@ -3,6 +3,7 @@ import { useFrame } from '@react-three/fiber'
 import { Raycaster, Vector3, type Mesh, type Object3D } from 'three'
 import { useGame } from '../store'
 import { seat, standing } from './FreeRoam'
+import { SEATED_EYE_MAX } from '../data/street'
 
 /**
  * The benches along the platform's back wall: C sits down, C again stands up,
@@ -76,7 +77,7 @@ export function Benches({ scene, floorY }: { scene: Object3D; floorY: number }) 
         changed: true,
         x: s.x,
         z: s.z,
-        eye: s.y + BENCHES.eyeAboveSeat - floorY,
+        eye: Math.min(s.y + BENCHES.eyeAboveSeat - floorY, SEATED_EYE_MAX),
         heading: BENCHES.heading,
         standX: BENCHES.standX,
         standZ: s.z,

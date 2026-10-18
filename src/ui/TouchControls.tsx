@@ -127,11 +127,28 @@ function LookPad() {
   const send = () => window.dispatchEvent(new MouseEvent('mousemove', { clientX: cursor.current.x, clientY: cursor.current.y }))
   useEffect(() => {
     send()
+    // sitting down or standing up (C, or its button) faces you the way the seat does
+    const onKey = (e: KeyboardEvent) => {
+      if (e.code !== 'KeyC') return
+      cursor.current = { x: innerWidth / 2, y: innerHeight / 2 }
+      send()
+    }
+    window.addEventListener('keydown', onKey)
     return () => {
+      window.removeEventListener('keydown', onKey)
       cursor.current = { x: innerWidth / 2, y: innerHeight / 2 }
       send()
     }
   }, [])
+  // finger lifted (or the touch cancelled): stop turning, but keep looking where you were
+  const letGo = () => {
+    last.current = null
+    const c = cursor.current
+    const half = innerWidth / 2
+    const off = (c.x - half) / half
+    if (Math.abs(off) > LOOK.turnEdge * 0.95) c.x = half + Math.sign(off) * LOOK.turnEdge * 0.95 * half
+    send()
+  }
 
   return (
     <>
@@ -163,16 +180,8 @@ function LookPad() {
             setTimeout(() => setHint(false), 1200) // let them see it worked first
           }
         }}
-        onPointerUp={() => {
-          last.current = null
-          // let go: stop turning, but keep looking where you were
-          const c = cursor.current
-          const half = innerWidth / 2
-          const off = (c.x - half) / half
-          if (Math.abs(off) > LOOK.turnEdge * 0.95) c.x = half + Math.sign(off) * LOOK.turnEdge * 0.95 * half
-          send()
-        }}
-        onPointerCancel={() => (last.current = null)}
+        onPointerUp={letGo}
+        onPointerCancel={letGo}
       />
     </>
   )

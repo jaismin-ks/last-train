@@ -192,7 +192,7 @@ export const RIDE_RITUALS = {
     perLetter: 0.07,
     hold: 2.5, // after "Not Delivered"
     thought: 'No signal.',
-    deliveredThought: 'It sent.',
+    deliveredThought: 'My text to Jess finally went through.',
   },
   call: {
     nudge: 'If he thinks someone’s waiting for me…',

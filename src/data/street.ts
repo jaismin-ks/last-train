@@ -66,6 +66,8 @@ export const HAZE = {
 
 /** Sidewalk top is 0.15 m above the road; eyes ~1.6 m above that. Real scale. */
 export const EYE_ABOVE_FLOOR = 1.6
+/** Sitting, your eyes are never higher than this above the floor (so sitting down always shows). */
+export const SEATED_EYE_MAX = 1.15
 export const EYE_HEIGHT = 0.15 + EYE_ABOVE_FLOOR
 
 /** Street walking route with floor heights, [x, floorY, z] (three.js). */

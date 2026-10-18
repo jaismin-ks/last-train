@@ -7,7 +7,7 @@ import { setFootsteps, setHeartbeat } from '../audio/sounds'
 import { useGame } from '../store'
 import { FEAR } from '../data/fear'
 import { fearFocus } from '../systems/fear'
-import { fitFov } from '../systems/device'
+import { fitFov, isTouch } from '../systems/device'
 
 /** Free walking area: the platform (three.js coords). */
 export type Area = { minX: number; maxX: number; minZ: number; maxZ: number; floorY: number }
@@ -107,6 +107,8 @@ export function FreeRoam({ area, collide, start, startHeading }: { area: Area; c
     const fwd = (i.forward ? 1 : 0) - (i.back ? 1 : 0)
     const side = (strafe.current.right ? 1 : 0) - (strafe.current.left ? 1 : 0)
     const locked = useGame.getState().inputLocked
+    // Phones: pushing the stick forward while sitting gets you up
+    if (isTouch && seat.active && !locked && !useGame.getState().panic && fwd > 0) Object.assign(seat, { active: false, changed: true })
     // Sat down / stood up since last frame
     if (seat.changed) {
       seat.changed = false
