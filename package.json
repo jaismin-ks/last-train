@@ -16,6 +16,7 @@
     "@react-three/postprocessing": "^2.19.1",
     "@theatre/core": "^0.7.2",
     "@theatre/r3f": "^0.7.2",
+    "@vercel/analytics": "^2.0.1",
     "howler": "^2.2.4",
     "postprocessing": "^6.39.5",
     "react": "^18.3.1",

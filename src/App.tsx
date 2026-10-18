@@ -1,4 +1,5 @@
 import { lazy, Suspense, useState } from 'react'
+import { Analytics } from '@vercel/analytics/react'
 import { useGame } from './store'
 import { LoadingScreen } from './ui/LoadingScreen'
 import { ContentWarning } from './ui/ContentWarning'
@@ -43,6 +44,8 @@ export default function App() {
       {/* testing only: left out of the published build */}
       {import.meta.env.DEV && <DevPanel />}
       <FilmGrain />
+      {/* page views, on Vercel (turned on in the project's Analytics tab) */}
+      <Analytics />
     </>
   )
 }
