@@ -145,19 +145,10 @@ export const STATIONS = {
   /** Getting off: walk up to an open door (this close to its middle, along the carriage, and this far over toward it)... */
   doorReach: 0.75,
   doorSideX: -72.7,
-  /** ...and you're carried out to here on the platform (x). */
-  stepOutX: -70.55, // about 1.2 m onto the platform: clear of the stairs and walls behind the edge
   /** Doors open while you're facing away from them: you turn toward them for this long (seconds), then it's your view again. */
   turnToDoors: 1.4,
   /** While the doors are open you can walk this far into a doorway (x). */
   doorwayX: -71.95,
-  /**
-   * Getting off early, he follows: he appears in the next door (inside, at
-   * fromX) while your back is turned, steps straight out to outX, then walks
-   * along the platform toward you and stops stopAt metres off. You turn to
-   * watch from turnAt; it cuts to black `hold` seconds after he's stopped.
-   */
-  follow: { appear: 0.6, turnAt: 1.4, fromX: -72.3, outX: -70.4, stepSpeed: 0.9, walkSpeed: 0.8, stopAt: 2.2, hold: 1.8, maxTime: 14 },
   /** Station model placement (three.js) and the extras we add to it. */
   model: {
     edgeX: -71.75, // its platform edge, just past the train doors (-71.86)

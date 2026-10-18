@@ -24,13 +24,13 @@ import { Warmup } from './Warmup'
 import { CAPTIONS } from '../data/captions'
 import { useGame } from '../store'
 import { playKeyTap, playLowBattery, playOwnKeys, playPresence, playTrainBrake, playTrainChime, playTrainDoors, setAlarm, setTrainRun, stopAllAudio } from '../audio/sounds'
-import { Train, TRAIN_MODEL, trainDoorCenters, trainLeave, trainLights } from './Train'
+import { Train, TRAIN_MODEL, trainDoorCenters, trainLights } from './Train'
 import { FreeRoam, autoWalk, cameraShake, seat, standing } from './FreeRoam'
 import { Figure, isWalking, stopWalking, walkTo } from './Figure'
 import { addFear, fearFocus, freezeForGood, resetFear, stepFear } from '../systems/fear'
 import { APPROACH, CAUGHT, FEAR, FIGURE_WALK } from '../data/fear'
 
-type Beat = 'depart' | 'cruise' | 'brake' | 'held' | 'resume' | 'pass' | 'arrive' | 'doors' | 'closing' | 'exit' | 'cut'
+type Beat = 'depart' | 'cruise' | 'brake' | 'held' | 'resume' | 'pass' | 'arrive' | 'doors' | 'closing' | 'cut'
 type RitualKind = 'text' | 'call' | 'keys'
 
 /** Three rituals in a random order (one per stretch). */
@@ -294,8 +294,6 @@ export function Ride() {
     ritual: 'none' as 'none' | 'offered' | 'doing' | 'done',
     ritualAt: 0, // when it was offered / started / finished
     ePressed: false,
-    exitDoorZ: 0, // the door you got off through
-    stoodAt: 0, // getting off early: when he stopped in front of you on the platform
     lookUntil: 0, // doors just opened behind you: you turn toward them until then
     passedAt: 0, // when the train cleared Ashdale
     prevX: 0, // your x last frame (walking toward a door?)
@@ -411,13 +409,13 @@ export function Ride() {
     const lastStation = s.leg >= STATIONS.names.length
     // the turn toward the doors is only a nudge: then the view is yours again
     if (s.lookUntil && now > s.lookUntil) {
-      if (s.beat !== 'exit') autoWalk.face = null // (getting off sets its own)
+      autoWalk.face = null
       s.lookUntil = 0
     }
 
     // Fade in from black once the doors have shut behind you
     const sinceStart = now - s.started
-    if (s.beat !== 'cut' && s.beat !== 'exit') {
+    if (s.beat !== 'cut') {
       const k = MathUtils.clamp((sinceStart - 0.8) / SCENE_FADE.in, 0, 1)
       if (k < 1 || game.blackout > 0) game.setBlackout(1 - k * k * (3 - 2 * k))
     }
@@ -459,7 +457,7 @@ export function Ride() {
     if (towardHim > 0.001) s.approachedAt = now
 
     // He reaches you: only if you walk into him, or on the last strike. He never says a word.
-    if (near < APPROACH.contact && (towardHim > 0.001 || s.finalStrike) && !game.missed && s.beat !== 'cut' && s.beat !== 'exit') {
+    if (near < APPROACH.contact && (towardHim > 0.001 || s.finalStrike) && !game.missed && s.beat !== 'cut') {
       game.fail(CAUGHT.heading, CAUGHT.line)
       game.setRitual({ phone: null })
       seat.active = false
@@ -812,15 +810,11 @@ export function Ride() {
           game.setRitual({ phone: null })
           if (seat.active) seat.active = false
           game.setEndingKind(lastStation ? 'ambiguous' : 'followed')
-          // out through the middle of the door, a couple of steps onto the platform, facing the wall
-          // looking along the platform (toward the next door, where he'd come out), not straight at its wall
-          const along = Math.sign(
-            (trainDoorCenters.filter((d) => Math.abs(d.z - door.z) > 2).sort((a, b) => Math.abs(a.z - door.z) - Math.abs(b.z - door.z))[0]?.z ?? door.z + 1) - door.z,
-          ) || 1
-          Object.assign(autoWalk, { active: true, x: STATIONS.stepOutX, z: door.z, speed: 1.5, face: Math.atan2(0.45, along) })
-          s.exitDoorZ = door.z
-          s.lookUntil = 0
-          go('exit')
+          // the moment you step off: black, the chime ringing over silence (the ending says the rest)
+          game.setBlackout(1)
+          stopAllAudio(50)
+          setTimeout(playTrainChime, 150) // after everything else has stopped
+          go('cut')
           break
         }
         if (!lastStation && t > 1.2) {
@@ -855,44 +849,6 @@ export function Ride() {
         }
         break
 
-      case 'exit': {
-        const followed = game.endingKind === 'followed'
-        const F = STATIONS.follow
-        if (followed && fig) {
-          // he gets off too: in the next door along while your back is turned...
-          if (t > F.appear)
-            once('follows', () => {
-              const other = trainDoorCenters
-                .filter((d) => Math.abs(d.z - s.exitDoorZ) > 2)
-                .sort((a, b) => Math.abs(a.z - s.exitDoorZ) - Math.abs(b.z - s.exitDoorZ))[0]
-              const z = other?.z ?? s.exitDoorZ + 5
-              stopWalking(fig)
-              fig.position.set(F.fromX, R.area.floorY, z)
-              fig.rotation.y = Math.PI / 2 // facing out of the train
-              fig.userData.eyesOpen = true
-              fig.visible = true
-              walkTo(fig, F.outX, z, F.stepSpeed) // ...straight out onto the platform
-            })
-          // then along the platform toward you, slowly, stopping a couple of metres off
-          if (s.said.has('follows') && !isWalking(fig))
-            once('comes', () => walkTo(fig, F.outX, me.z + Math.sign(fig.position.z - me.z) * F.stopAt, F.walkSpeed))
-          if (s.said.has('comes') && !isWalking(fig)) once('stands', () => (s.stoodAt = now)) // and he turns to face you
-          // you turn and keep him in view
-          if (s.said.has('follows') && t > F.turnAt) autoWalk.face = Math.atan2(fig.position.x - me.x, fig.position.z - me.z)
-        }
-        // black, the chime ringing over silence: at your stop the moment you step off;
-        // followed, once he's stood facing you a moment
-        const over = followed ? (s.stoodAt > 0 && now - s.stoodAt > F.hold) || t > F.maxTime : true
-        if (over) {
-          game.setBlackout(1)
-          stopAllAudio(50)
-          setTimeout(playTrainChime, 150) // after everything else has stopped
-          go('cut')
-        }
-        break
-
-      }
-
       case 'cut':
         if (t > 3.5) game.setPhase('epilogue')
         break
@@ -916,7 +872,7 @@ export function Ride() {
     nearSeat.current = nearest
     const ritualCfg = RIDE_RITUALS[s.rituals[s.leg - 1]]
     const prompt =
-      s.beat === 'cut' || s.beat === 'exit' || s.ritual === 'doing'
+      s.beat === 'cut' || s.ritual === 'doing'
         ? null
         : s.ritual === 'offered'
           ? ritualCfg.prompt
@@ -933,13 +889,11 @@ export function Ride() {
     if (fill.current) fill.current.intensity = FILL * (1 - (1 - SIREN.ambient) * siren.current)
 
     if (s.beat !== 'brake') cameraShake.amount = TUNNEL.shake * speed.current
-    // the train pulling away from your stop still rumbles, fading as it goes
-    const leaving = s.beat === 'exit' && game.trainState === 'leaving' ? Math.min(1, -trainLeave.z / 30) * Math.max(0, 1 + trainLeave.z / 120) : 0
-    setTrainRun(s.beat === 'cut' ? 0 : Math.max(speed.current, leaving))
+    setTrainRun(s.beat === 'cut' ? 0 : speed.current)
     // Fear: rises with him near and in sight. Only the rituals ease it, briefly.
     const fearDist = fig?.visible ? (inYourCarriage ? near : dist) : Infinity
     const approaching = !warded && now - s.approachedAt < 0.8
-    if (s.beat !== 'exit' && stepFear(now, Math.min(dt, 0.1), fearDist, inView, calm, approaching) === 'panic' && fig && inYourCarriage) {
+    if (stepFear(now, Math.min(dt, 0.1), fearDist, inView, calm, approaching) === 'panic' && fig && inYourCarriage) {
       s.strikes += 1
       if (s.strikes >= FEAR.strikes) {
         // third time: you can't move at all, and he walks all the way to you
