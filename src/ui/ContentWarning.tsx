@@ -16,8 +16,8 @@ export function ContentWarning() {
       </p>
       {isTouch && (
         <p className={s.small}>
-          On a phone: play it sideways. Left thumb to walk (push all the way to run), drag on the right to look, and tap the
-          prompts on screen.
+          On a phone: hold it upright. Left thumb to walk (push all the way to run), drag anywhere else to look, and tap
+          the prompts on screen.
           {isIOS && !isStandalone && ' For full screen on iPhone: tap Share, then Add to Home Screen, and open it from there.'}
         </p>
       )}

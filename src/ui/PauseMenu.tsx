@@ -112,8 +112,8 @@ export function PauseMenu() {
             <div className={s.controls}>
               <kbd>Left thumb</kbd>
               <span>walk (push all the way to run, sideways to step)</span>
-              <kbd>Right side</kbd>
-              <span>drag to look around</span>
+              <kbd>Drag</kbd>
+              <span>anywhere else to look around</span>
               <kbd>Prompts</kbd>
               <span>tap them (sit, text, call…)</span>
             </div>

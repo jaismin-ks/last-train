@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { CREDITS, CREDITS_INTRO, REFERENCES, type Credit } from '../data/credits'
 import { useGame } from '../store'
 import s from './credits.module.css'
@@ -14,6 +14,7 @@ const ROLL_SPEED = 38
 export function Credits() {
   const setPhase = useGame((st) => st.setPhase)
   const page = useRef<HTMLElement>(null)
+  const [atEnd, setAtEnd] = useState(false) // the scroll hint goes once you reach the bottom
 
   // Roll upward until the reader takes over (or it reaches the end)
   useEffect(() => {
@@ -31,6 +32,7 @@ export function Credits() {
         el.scrollTop = pos
         if (el.scrollTop + el.clientHeight >= el.scrollHeight - 1) rolling = false
       }
+      setAtEnd(el.scrollTop + el.clientHeight >= el.scrollHeight - 80)
       raf = requestAnimationFrame(tick)
     }
     raf = requestAnimationFrame(tick)
@@ -59,6 +61,14 @@ export function Credits() {
         <Section key={group.title} title={group.title} items={group.items.filter((c) => !c.todo)} />
       ))}
       <Section title="References" items={REFERENCES} />
+
+      {/* a quiet hint that there's more below (they roll by themselves, and you can scroll) */}
+      <div className={`${s.scrollHint} ${atEnd ? s.scrollHintGone : ''}`} aria-hidden>
+        <span>Scroll</span>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+          <path d="M6 9l6 6 6-6" />
+        </svg>
+      </div>
 
       <footer className={s.footer}>
         <button className={s.back} onClick={() => setPhase('endCard')}>

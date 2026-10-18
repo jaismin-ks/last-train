@@ -1,14 +1,21 @@
 import { useEffect, useRef, useState } from 'react'
 import { useGame } from '../store'
-import { isTouch } from '../systems/device'
+import { isTouch, usePortrait } from '../systems/device'
 
 /**
- * Phones and tablets: a thumbstick on the left (push to walk, all the way to run,
- * sideways to step) and drag on the right to look. They press the same keys and
+ * Phones and tablets: a thumbstick bottom left (push to walk, all the way to run,
+ * sideways to step) and drag anywhere else to look. They press the same keys and
  * move the same cursor the keyboard and mouse do, so the game itself doesn't change.
  */
 const STICK = { radius: 56, deadZone: 0.35, side: 0.45, run: 0.92 }
-const LOOK = { sensitivity: 2.2, turnEdge: 0.6 } // turnEdge: the cursor position (0–1 from the middle) where turning starts
+// across / upDown: how far you drag (px) to look from the middle to the edge of the view;
+// turnEdge: the cursor position (0–1 from the middle) where turning starts
+const LOOK = { across: 185, upDown: 85, turnEdge: 0.6 }
+/** Where the left thumb finds the stick: held upright it's the bottom of the screen. */
+const STICK_AREA = {
+  wide: { area: { width: '45%', height: '65%' }, rest: { left: '22%', bottom: '24%' } },
+  tall: { area: { width: '50%', height: '45%' }, rest: { left: '20%', bottom: '16%' } },
+}
 const WALK_PHASES = ['street', 'platform', 'ride']
 
 /** Keep getting this finger's moves even if it slides off the pad (some browsers refuse; it still works without). */
@@ -22,6 +29,12 @@ const capture = (e: React.PointerEvent<HTMLElement>) => {
 
 const press = (code: string, down: boolean) =>
   window.dispatchEvent(new KeyboardEvent(down ? 'keydown' : 'keyup', { code, key: code }))
+
+/** A phone held upright while walking: both thumbs sit along the bottom, so on-screen text moves up out of their way. */
+export function useThumbsAtBottom() {
+  const phase = useGame((s) => s.phase)
+  return usePortrait() && isTouch && WALK_PHASES.includes(phase)
+}
 
 export function TouchControls() {
   const phase = useGame((s) => s.phase)
@@ -39,6 +52,7 @@ export function TouchControls() {
 }
 
 function Stick() {
+  const fit = STICK_AREA[usePortrait() ? 'tall' : 'wide']
   const held = useRef<Record<string, boolean>>({})
   const [knob, setKnob] = useState<{ ox: number; oy: number; dx: number; dy: number } | null>(null)
   const id = useRef<number | null>(null)
@@ -72,7 +86,7 @@ function Stick() {
 
   return (
     <div
-      style={{ position: 'fixed', left: 0, bottom: 0, width: '45%', height: '65%', zIndex: 4, touchAction: 'none' }}
+      style={{ position: 'fixed', left: 0, bottom: 0, ...fit.area, zIndex: 4, touchAction: 'none' }}
       onPointerDown={(e) => {
         id.current = e.pointerId
         capture(e)
@@ -92,7 +106,7 @@ function Stick() {
     >
       {/* resting hint, then the stick under your thumb */}
       {!knob && (
-        <div style={{ position: 'absolute', left: '22%', bottom: '24%', width: 88, height: 88, borderRadius: '50%', border: '1px solid rgba(232,236,233,0.18)' }} />
+        <div style={{ position: 'absolute', ...fit.rest, width: 88, height: 88, borderRadius: '50%', border: '1px solid rgba(232,236,233,0.18)' }} />
       )}
       {knob && (
         <div style={{ position: 'fixed', left: knob.ox - STICK.radius, top: knob.oy - STICK.radius, width: STICK.radius * 2, height: STICK.radius * 2, borderRadius: '50%', border: '1px solid rgba(232,236,233,0.3)', pointerEvents: 'none' }}>
@@ -118,7 +132,8 @@ function LookPad() {
 
   return (
     <div
-      style={{ position: 'fixed', right: 0, top: '12%', width: '55%', height: '88%', zIndex: 4, touchAction: 'none' }}
+      // everywhere below the corner buttons; the stick sits on top of it
+      style={{ position: 'fixed', left: 0, right: 0, top: '12%', bottom: 0, zIndex: 3, touchAction: 'none' }}
       onPointerDown={(e) => {
         last.current = { x: e.clientX, y: e.clientY, id: e.pointerId }
         capture(e)
@@ -127,8 +142,9 @@ function LookPad() {
         const l = last.current
         if (!l || l.id !== e.pointerId) return
         const c = cursor.current
-        c.x = Math.min(innerWidth - 1, Math.max(0, c.x + (e.clientX - l.x) * LOOK.sensitivity))
-        c.y = Math.min(innerHeight - 1, Math.max(0, c.y + (e.clientY - l.y) * LOOK.sensitivity))
+        // the same drag looks as far whichever way the phone is held
+        c.x = Math.min(innerWidth - 1, Math.max(0, c.x + ((e.clientX - l.x) * innerWidth) / 2 / LOOK.across))
+        c.y = Math.min(innerHeight - 1, Math.max(0, c.y + ((e.clientY - l.y) * innerHeight) / 2 / LOOK.upDown))
         l.x = e.clientX
         l.y = e.clientY
         send()

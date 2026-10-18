@@ -14,7 +14,6 @@ export function Resources() {
         </header>
 
         <p className={s.emergency} role="note">
-          <span className={s.dot} aria-hidden />
           {RESOURCES_SCREEN.emergency}
         </p>
 

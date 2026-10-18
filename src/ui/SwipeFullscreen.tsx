@@ -7,17 +7,19 @@ import { IN_GAME } from './Hud'
  * iPhone Safari never lets a page go fullscreen, but it shrinks its toolbars when
  * the page is scrolled. So on iPhone the page is always a little taller than the
  * screen and scrollable behind the game (the game itself stays pinned to the
- * visible screen); while the bars are showing, held sideways, this asks for a
- * swipe up. The page is never locked again afterwards: that would scroll it back
+ * visible screen); while the bars are showing, this asks for a swipe up. The page is never locked again afterwards: that would scroll it back
  * to the top and Safari would bring its bars back. The game's own controls never
  * scroll the page. Shown again if the bars come back; the game pauses while it's up.
  */
-const BARS_SHOWING = 40 // px: the view is at least this much shorter than the screen
+// px: the view is at least this much shorter than the screen. Upright, Safari never
+// hides everything (the status bar and a small address bar stay), so it allows more.
+const BARS_SHOWING = { wide: 40, tall: 120 }
 
-/** The bars are taking up space (landscape: the screen's short side is its full height). */
+/** The bars are taking up space (the screen's height is its long side upright, its short side sideways). */
 function barsShowing() {
-  const full = Math.min(screen.width, screen.height)
-  return full - window.innerHeight > BARS_SHOWING
+  const tall = !!portraitQuery?.matches
+  const full = tall ? Math.max(screen.width, screen.height) : Math.min(screen.width, screen.height)
+  return full - window.innerHeight > BARS_SHOWING[tall ? 'tall' : 'wide']
 }
 
 export function SwipeFullscreen() {
@@ -28,7 +30,7 @@ export function SwipeFullscreen() {
   useEffect(() => {
     if (!enabled) return
     document.documentElement.classList.add('swipe-fullscreen') // for good, on iPhone
-    const check = () => setShow(!portraitQuery?.matches && barsShowing())
+    const check = () => setShow(barsShowing())
     check()
     // the bars animate: look again once they've settled
     const later = () => setTimeout(check, 350)

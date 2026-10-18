@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useProgress } from '@react-three/drei'
 import { useGame } from '../store'
 import { startAmbience, unlockAudio } from '../audio/sounds'
-import { goLandscape } from '../systems/device'
+import { goFullscreen } from '../systems/device'
 import s from './screens.module.css'
 
 /** If loading stalls (a file that never arrives), let them begin anyway after this long (seconds). */
@@ -34,7 +34,7 @@ export function StartScreen() {
   }, [])
   const ready = !active || progress >= 100 || waitedEnough
   const begin = () => {
-    goLandscape() // phones: fullscreen, held sideways where the browser allows
+    goFullscreen() // phones: fullscreen where the browser allows
     unlockAudio()
     startAmbience() // outside ambience runs from the start (this click also unlocks audio)
     setPhase('phoneIntro')

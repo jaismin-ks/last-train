@@ -7,6 +7,7 @@ import { setFootsteps, setHeartbeat } from '../audio/sounds'
 import { useGame } from '../store'
 import { FEAR } from '../data/fear'
 import { fearFocus } from '../systems/fear'
+import { fitFov } from '../systems/device'
 
 /** Free walking area: the platform (three.js coords). */
 export type Area = { minX: number; maxX: number; minZ: number; maxZ: number; floorY: number }
@@ -120,11 +121,12 @@ export function FreeRoam({ area, collide, start, startHeading }: { area: Area; c
     const frozen = locked || panic // panic: you can barely move or look away
     const moving = !locked && !seat.active && (fwd !== 0 || side !== 0)
 
-    // Fear narrows your view
-    const fov = baseFov.current - FEAR.fovDrop * stress
-    if (Math.abs((camera as PerspectiveCamera).fov - fov) > 0.05) {
-      ;(camera as PerspectiveCamera).fov = fov
-      camera.updateProjectionMatrix()
+    // Fear narrows your view (opened up on a tall screen)
+    const lens = camera as PerspectiveCamera
+    const fov = fitFov(baseFov.current - FEAR.fovDrop * stress, lens.aspect)
+    if (Math.abs(lens.fov - fov) > 0.05) {
+      lens.fov = fov
+      lens.updateProjectionMatrix()
     }
 
     // Running: same energy rules as on the route

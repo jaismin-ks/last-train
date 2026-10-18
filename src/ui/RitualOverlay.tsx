@@ -1,6 +1,16 @@
 import { useGame } from '../store'
 import { RIDE_RITUALS } from '../data/ride'
 import s from './ritual.module.css'
+import { isTouch } from '../systems/device'
+
+/** How far up the screen the held phone reaches (px, with its put-away label), for text that must stay clear of it. */
+export const PHONE_CLEAR = 350
+
+/** On a phone there's no E: tapping the label above the phone puts it away. */
+const putAway = () => {
+  window.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyE', key: 'e' }))
+  window.dispatchEvent(new KeyboardEvent('keyup', { code: 'KeyE', key: 'e' }))
+}
 
 /**
  * Train rituals on screen: the phone held up (a text that won't send, or a
@@ -21,7 +31,13 @@ export function RitualOverlay() {
             <span className={s.noService}>No Service</span>
             <span className={s.battery}>{battery}%</span>
           </div>
-          <div className={s.putAway}>E · put away</div>
+          {isTouch ? (
+            <button className={`${s.putAway} ${s.putAwayTap}`} onPointerDown={putAway}>
+              Tap to put away
+            </button>
+          ) : (
+            <div className={s.putAway}>E · put away</div>
+          )}
           {phone.kind === 'text' ? (
             <div className={s.chat}>
               <div className={s.to}>Jess (roommate)</div>

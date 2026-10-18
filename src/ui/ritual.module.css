@@ -5,8 +5,14 @@
   background: #050505; border: 6px solid #1a1a1c; box-shadow: 0 0 60px rgba(0, 0, 0, 0.9);
   font-family: -apple-system, 'Helvetica Neue', Arial, sans-serif; color: #f2f2f7;
   animation: phoneUp 0.5s ease both;
+  pointer-events: none; /* looking around and walking still work under it */
 }
 .putAway { position: absolute; top: -26px; left: 0; right: 0; text-align: center; font-family: var(--font-ui); font-size: 10px; letter-spacing: 0.25em; text-transform: uppercase; color: var(--text-dim); }
+.putAwayTap { top: -44px; padding: 12px 0; background: none; border: 0; pointer-events: auto; touch-action: none; }
+/* held upright: a little smaller and nearer the middle, so it doesn't fill the screen */
+@media (orientation: portrait) { .phone { right: 5%; width: 232px; height: 312px; } }
+/* a phone held sideways is short: scale it down so it doesn't reach the top */
+@media (orientation: landscape) and (max-height: 480px) { .phone { scale: 0.8; transform-origin: 100% 100%; } }
 .status { display: flex; justify-content: space-between; font-size: 11px; color: #c7c7cc; padding: 0 4px 10px; }
 .noService { color: #ff6b5f; }
 .battery { color: #ff453a; }

@@ -1,5 +1,8 @@
 import { useEffect, useState } from 'react'
 import { useGame } from '../store'
+import { usePortrait } from '../systems/device'
+import { useThumbsAtBottom } from './TouchControls'
+import { PHONE_CLEAR } from './RitualOverlay'
 
 /**
  * Instruction caption at the bottom of the screen, styled like film subtitles.
@@ -9,6 +12,11 @@ export function Caption() {
   const caption = useGame((s) => s.caption)
   const [shown, setShown] = useState(caption)
   const [visible, setVisible] = useState(!!caption)
+  // held upright, the phone (during a ritual) covers the bottom: go above it
+  const phoneUp = useGame((s) => s.ritual.phone !== null)
+  const portrait = usePortrait()
+  const overPhone = phoneUp && portrait
+  const thumbs = useThumbsAtBottom()
 
   useEffect(() => {
     setVisible(false)
@@ -26,7 +34,7 @@ export function Caption() {
         position: 'fixed',
         left: 0,
         right: 0,
-        bottom: '6%',
+        bottom: overPhone ? `calc(${PHONE_CLEAR}px + 3%)` : thumbs ? '30%' : '6%',
         padding: '0 max(24px, 12%)', // long announcements wrap instead of running edge to edge
         textAlign: 'center',
         pointerEvents: 'none',

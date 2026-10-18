@@ -4,6 +4,7 @@ import { Preload, useGLTF } from '@react-three/drei'
 import { Box3, DoubleSide, Vector3, type Mesh, type MeshStandardMaterial, type PerspectiveCamera } from 'three'
 import { COUNTDOWN, DRACO, SCENE_FADE } from '../data/street'
 import { useGame } from '../store'
+import { fitFov } from '../systems/device'
 import { type PresenceKind, playClang, setEscalatorVolume, setFootsteps, startStationAmbience, stopAmbience, stopEscalator, stopStationAmbience } from '../audio/sounds'
 import markers from '../data/station-markers.json'
 import { CAPTIONS, THOUGHTS } from '../data/captions'
@@ -51,6 +52,7 @@ const HUM = { volume: 0.7, reach: 28 } // loudest volume, metres at which it fad
 export function Station() {
   const { scene } = useGLTF(STATION_MODEL, DRACO)
   const camera = useThree((s) => s.camera) as PerspectiveCamera
+  const aspect = useThree((s) => s.size.width / s.size.height)
   const setBlackout = useGame((s) => s.setBlackout)
   const start = useRef<number | null>(null)
   const faded = useRef(false)
@@ -132,11 +134,11 @@ export function Station() {
   }, [scene])
 
   useEffect(() => {
-    camera.fov = 60
+    camera.fov = fitFov(60, aspect)
     camera.near = 0.05
     camera.far = 400
     camera.updateProjectionMatrix()
-  }, [camera])
+  }, [camera, aspect])
 
   useFrame(({ clock }) => {
     // Fade in from black

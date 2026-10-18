@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useGame } from '../store'
 import { isTouch } from '../systems/device'
+import { useThumbsAtBottom } from './TouchControls'
 
 /**
  * Small interaction hint above the caption: a key chip and a quiet word,
@@ -10,6 +11,7 @@ export function Prompt() {
   const prompt = useGame((s) => s.prompt)
   // keep the last text while fading out, so it doesn't vanish mid-fade
   const [shown, setShown] = useState(prompt)
+  const thumbs = useThumbsAtBottom()
   useEffect(() => {
     if (prompt) setShown(prompt)
   }, [prompt])
@@ -23,20 +25,23 @@ export function Prompt() {
     window.dispatchEvent(new KeyboardEvent('keyup', { code, key }))
   }
 
+  const tappable = isTouch && !!prompt && !!key
   return (
     <div
       aria-live="polite"
-      onPointerDown={isTouch && prompt && key ? tap : undefined}
+      onPointerDown={tappable ? tap : undefined}
       style={{
         position: 'fixed',
-        left: 0,
-        right: 0,
-        bottom: '15%',
+        left: '50%',
+        transform: 'translateX(-50%)', // only as wide as the hint, so the thumbs around it still walk and look
+        bottom: thumbs ? '24%' : '15%',
         display: 'flex',
         justifyContent: 'center',
         alignItems: 'center',
         gap: 10,
-        pointerEvents: isTouch && prompt && key ? 'auto' : 'none',
+        padding: tappable ? '10px 14px' : 0,
+        whiteSpace: 'nowrap',
+        pointerEvents: tappable ? 'auto' : 'none',
         zIndex: 5,
         color: 'rgba(230, 240, 235, 0.72)',
         fontFamily: 'var(--font-ui)',

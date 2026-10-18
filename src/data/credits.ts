@@ -39,7 +39,7 @@ const pixabay = (what: string, who: string, url: string, whoUrl?: string): Credi
 export const CREDITS_INTRO = {
   title: 'Last Train',
   subtitle: 'text me when you get home',
-  by: 'A project by Jaismin',
+  by: 'A web experience by Jaismin',
 }
 
 export const CREDITS: CreditGroup[] = [
@@ -56,8 +56,8 @@ export const CREDITS: CreditGroup[] = [
       sketchfab('Old Residential Building [4k]', 'Andrej Grave', 'CC BY 4.0', 'https://sketchfab.com/3d-models/old-residential-building-4k-dd400ed693cf416e940c5b8e3107205e', 'andrej.grave'),
       sketchfab('Low Poly – Soviet Apartment Building 8K', 'Colin.Greenall', 'CC BY 4.0', 'https://sketchfab.com/3d-models/low-poly-soviet-apartment-building-8k-05229ac1d1f94e6c8cacaad91110c602', 'Colin.Greenall'),
       sketchfab('Detailed 12 storey panel apartment building', 'bean (alwayshasbean)', 'CC BY 4.0', 'https://sketchfab.com/3d-models/detailed-12-storey-panel-apartment-building-cb7064bec48845fea62a830b2c692fb1', 'alwayshasbean'),
-      { what: 'Subway station (walk down to the platform)', who: '', where: 'Sketchfab', license: '', todo: true },
-      { what: 'CCTV camera', who: '', where: 'Sketchfab', license: '', todo: true },
+      sketchfab('Subway (the station you walk down to the platform)', 'Veterock', 'CC BY 4.0', 'https://sketchfab.com/3d-models/subway-bd022dc78c26444d9a85ef0560733dcc', 'windofglass'),
+      sketchfab('Cctv', 'Einheri', 'CC BY 4.0', 'https://sketchfab.com/3d-models/cctv-ac20acbb2d73465eb2cc5a5a4afe1f59', 'Einheri'),
     ],
   },
   {
@@ -109,18 +109,14 @@ export const CREDITS: CreditGroup[] = [
       pixabay('Horror opening (trailer)', 'ArctSound', 'https://pixabay.com/sound-effects/horror-horror-opening-603777/', 'https://pixabay.com/users/arctsound-27113883/'),
       pixabay('Heavy footsteps walking', 'freesound_community', 'https://pixabay.com/sound-effects/household-heavy-footsteps-walking-35722/'),
       pixabay('Eerie ambience', 'Razorrekker (via freesound_community)', 'https://pixabay.com/sound-effects/film-special-effects-eerie-ambience-65606/', 'https://freesound.org/people/Razorrekker/'),
-      ...[
-        'Escalator hum',
-        'Phone typing',
-        'Keys jingle',
-        'Low battery alert',
-        'Man coughing',
-        'Second laugh',
-        'Message sent / received',
-        'Metal gate clang',
-        'Street / station ambience',
-        'Footsteps on concrete',
-      ].map((what) => ({ what, who: '', where: '', license: '', todo: true })),
+      pixabay('Squeaky escalator', 'AmazingRolo (via freesound_community)', 'https://pixabay.com/sound-effects/technology-squeaky-escalator-25676/', 'https://freesound.org/people/AmazingRolo/'),
+      pixabay('iPhone keyboard typing', 'u_a4gfvwagf1', 'https://pixabay.com/sound-effects/film-special-effects-iphone-keyboard-typing-sound-effect-336778/', 'https://pixabay.com/users/u_a4gfvwagf1-50011055/'),
+      pixabay('Keys jingling and dropping', 'quantumriver (via freesound_community)', 'https://pixabay.com/sound-effects/film-special-effects-keys-jingling-and-dropping-95249/', 'https://freesound.org/people/quantumriver/'),
+      pixabay('Low battery', 'snorcon', 'https://pixabay.com/sound-effects/film-special-effects-low-battery-421820/', 'https://pixabay.com/users/snorcon-52811738/'),
+      pixabay('Cough', 'Fabrizio84 (via freesound_community)', 'https://pixabay.com/sound-effects/people-cough-82181/', 'https://freesound.org/people/Fabrizio84/'),
+      pixabay('Message envoyé (iPhone)', 'Son_duquotidient', 'https://pixabay.com/sound-effects/film-special-effects-message-envoy%C3%A9-iphone-apple-391098/', 'https://pixabay.com/users/son_duquotidient-44285139/'),
+      pixabay('Deep metal clang', 'BlenderDiplom (via freesound_community)', 'https://pixabay.com/sound-effects/film-special-effects-deep-metal-clang-87901/', 'https://freesound.org/people/BlenderDiplom/'),
+      ...['Message received', 'Street / station ambience', 'Footsteps on concrete'].map((what) => ({ what, who: '', where: '', license: '', todo: true })),
     ],
   },
   {

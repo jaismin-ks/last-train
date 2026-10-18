@@ -1,16 +1,17 @@
-/* The support button: flat and square. Dark red until pressed; then a red outline holding the count */
-.support { display: grid; gap: 18px; padding-top: 34px; border-top: 1px solid rgba(232, 236, 233, 0.12); }
-.supportAsk { font-family: var(--font-display); font-style: italic; font-size: clamp(19px, 2.2vw, 24px); line-height: 1.4; }
+/* The support button: a compact, quiet red (serif like the page). Pressed: a thin red outline holding the count */
+.support { display: grid; gap: 20px; justify-items: center; padding-top: 34px; border-top: 1px solid rgba(232, 236, 233, 0.1); }
+.supportAsk { font-family: var(--font-display); font-style: italic; font-size: clamp(18px, 2vw, 22px); line-height: 1.45; color: var(--text-dim); max-width: 560px; text-wrap: balance; }
 .supportButton {
-  width: 100%; padding: 22px 16px; border: 1px solid #741610; border-radius: 0; background: #741610; color: #fff;
-  font-family: var(--font-ui); font-size: 14px; font-weight: 600; letter-spacing: 0.3em; text-transform: uppercase;
-  cursor: pointer; transition: background 0.25s, border-color 0.25s, color 0.25s;
+  min-width: 240px; padding: 14px 36px; border: 1px solid rgba(214, 72, 60, 0.55); border-radius: 0;
+  background: rgba(120, 22, 16, 0.45); color: #f3e7e5;
+  font-family: var(--font-display); font-size: 21px; font-weight: 400; letter-spacing: 0.01em;
+  cursor: pointer; transition: background 0.3s, border-color 0.3s, color 0.3s;
 }
-.supportButton:hover:not(:disabled) { background: #8a1c15; border-color: #8a1c15; }
-.supportButton:active:not(:disabled) { background: #5e110c; border-color: #5e110c; }
+.supportButton:hover:not(:disabled) { background: rgba(140, 28, 21, 0.7); border-color: rgba(230, 90, 76, 0.8); }
+.supportButton:active:not(:disabled) { background: rgba(96, 17, 12, 0.8); }
 .supportButton:focus-visible { outline: 1px solid var(--text); outline-offset: 4px; }
-/* pressed: it empties to a red outline, and the count shows inside */
-.supportPressed { background: transparent; border-color: #b8322a; color: #e0796e; cursor: default; }
+/* pressed: it empties to a thin red outline, and the count shows inside */
+.supportPressed { background: transparent; border-color: rgba(214, 72, 60, 0.45); color: #e48a80; cursor: default; font-style: italic; }
 /* under the pressed button */
 .supportAfter { font-family: var(--font-display); font-style: italic; font-size: clamp(19px, 2.2vw, 24px); line-height: 1.4; }
 .supportAfter:not(:empty) { animation: fade 0.8s ease both; }

@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import { useGame } from './store'
 import { LoadingScreen } from './ui/LoadingScreen'
-import { RotateNotice } from './ui/RotateNotice'
 import { SwipeFullscreen } from './ui/SwipeFullscreen'
 import { ContentWarning } from './ui/ContentWarning'
 import { StartScreen } from './ui/StartScreen'
@@ -35,7 +34,6 @@ export default function App() {
       {/* testing only: left out of the published build */}
       {import.meta.env.DEV && <DevPanel />}
       <FilmGrain />
-      <RotateNotice />
       <SwipeFullscreen />
     </>
   )

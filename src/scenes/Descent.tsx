@@ -4,6 +4,7 @@ import { useFrame, useThree } from '@react-three/fiber'
 import { Color, Fog, MathUtils, PerspectiveCamera, Vector3 } from 'three'
 import { DESCENT, EYE_HEIGHT, FOG, NIGHT_LIGHT, PLAYER_START, STREET_ROUTE, COUNTDOWN } from '../data/street'
 import { useGame } from '../store'
+import { fitFov } from '../systems/device'
 import { NightSky } from './NightSky'
 import { SkyHaze } from './SkyHaze'
 import { Street } from './Street'
@@ -28,6 +29,7 @@ const ease = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 
  */
 export function Descent() {
   const camera = useThree((s) => s.camera) as PerspectiveCamera
+  const aspect = useThree((s) => s.size.width / s.size.height)
   const setPhase = useGame((s) => s.setPhase)
 
   const phase = useGame((s) => s.phase)
@@ -46,11 +48,11 @@ export function Descent() {
   // Switch from the phone close-up lens to the city lens when the descent starts
   useEffect(() => {
     if (!running) return
-    camera.fov = 60
+    camera.fov = fitFov(60, aspect)
     camera.near = 0.05
     camera.far = 500
     camera.updateProjectionMatrix()
-  }, [camera, running])
+  }, [camera, running, aspect])
 
   useFrame(({ clock }) => {
     if (phase !== 'descent') return

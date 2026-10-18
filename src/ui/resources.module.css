@@ -8,11 +8,9 @@
 
 /* in danger right now: first thing after the welcome */
 .emergency {
-  justify-self: center; display: flex; align-items: center; gap: 12px;
-  padding: 12px 18px; border: 1px solid rgba(232, 236, 233, 0.18);
-  font-size: 13px; letter-spacing: 0.03em; line-height: 1.5; text-align: left;
+  justify-self: center; text-align: center; max-width: 640px; text-wrap: balance;
+  font-family: var(--font-display); font-size: clamp(20px, 2.3vw, 26px); line-height: 1.4; color: var(--text);
 }
-.dot { width: 6px; height: 6px; border-radius: 50%; background: #b8322a; flex: none; }
 
 .groups { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; }
 @media (min-width: 720px) { .groups { grid-template-columns: repeat(2, minmax(0, 1fr)); } } /* four groups: a balanced 2 × 2 */

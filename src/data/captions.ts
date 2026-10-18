@@ -6,7 +6,7 @@
 import { isTouch } from '../systems/device'
 
 const WALK_HINT = isTouch ? 'Push the left stick to walk  ·  all the way to run' : 'Hold W to keep walking  ·  Shift to run'
-const ROAM_HINT = isTouch ? 'Left stick to move  ·  drag on the right to look' : 'WASD to move  ·  Mouse to look'
+const ROAM_HINT = isTouch ? 'Left stick to move  ·  drag to look' : 'WASD to move  ·  Mouse to look'
 
 export const CAPTIONS = {
   phone: {
@@ -87,7 +87,7 @@ export const RESOURCES = RESOURCE_GROUPS.flatMap((g) => g.items)
 export const RESOURCES_SCREEN = {
   title: "You're not alone.",
   lede: 'If anything here stayed with you, or felt familiar, these people are there to listen.',
-  emergency: 'If you are in danger right now, call 911, or your local emergency number.',
+  emergency: 'If you are in danger right now, call\u00a0911, or your local emergency number.', // \u00a0 keeps "call 911" on one line
 }
 
 /**
@@ -96,8 +96,8 @@ export const RESOURCES_SCREEN = {
  * `after` line appears under it.
  */
 export const SUPPORT = {
-  ask: 'If you or someone you know has experienced something like this, press to show your support.',
-  button: 'I stand with you',
+  ask: 'Been through something like this, or know someone who has?',
+  button: 'Show support',
   pressed: (n: number) => `${n.toLocaleString()} ${n === 1 ? 'person' : 'people'}`,
   after: 'We stand together against harassment and violence.',
 }
