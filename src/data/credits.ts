@@ -140,6 +140,7 @@ export const CREDITS: CreditGroup[] = [
       { what: 'React Three Fiber, drei', who: 'Poimandres', where: '', license: 'MIT', url: 'https://github.com/pmndrs/react-three-fiber', whoUrl: 'https://pmnd.rs/' },
       { what: 'Theatre.js', who: 'Theatre.js contributors', where: '', license: 'Apache 2.0', url: 'https://www.theatrejs.com/' },
       { what: 'howler.js', who: 'James Simpson', where: '', license: 'MIT', url: 'https://howlerjs.com/' },
+      { what: 'Coding assistance', who: 'Claude by Anthropic', where: '', license: '', url: 'https://claude.ai/', whoUrl: 'https://www.anthropic.com/' },
     ],
   },
 ]
