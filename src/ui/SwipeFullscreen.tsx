@@ -5,10 +5,12 @@ import { IN_GAME } from './Hud'
 
 /**
  * iPhone Safari never lets a page go fullscreen, but it shrinks its toolbars when
- * the page is scrolled. So while the bars are showing (held sideways), the page
- * briefly gets taller and asks for a swipe up; one swipe and Safari tucks its bars
- * away, then the page locks again. Shown again if the bars come back. The game
- * pauses while it's up and carries on after.
+ * the page is scrolled. So on iPhone the page is always a little taller than the
+ * screen and scrollable behind the game (the game itself stays pinned to the
+ * visible screen); while the bars are showing, held sideways, this asks for a
+ * swipe up. The page is never locked again afterwards: that would scroll it back
+ * to the top and Safari would bring its bars back. The game's own controls never
+ * scroll the page. Shown again if the bars come back; the game pauses while it's up.
  */
 const BARS_SHOWING = 40 // px: the view is at least this much shorter than the screen
 
@@ -25,6 +27,7 @@ export function SwipeFullscreen() {
 
   useEffect(() => {
     if (!enabled) return
+    document.documentElement.classList.add('swipe-fullscreen') // for good, on iPhone
     const check = () => setShow(!portraitQuery?.matches && barsShowing())
     check()
     // the bars animate: look again once they've settled
@@ -43,16 +46,15 @@ export function SwipeFullscreen() {
   // and the game waits; after, the page locks again and the game carries on
   useEffect(() => {
     if (!enabled) return
-    const root = document.documentElement
     if (show) {
-      root.classList.add('swipe-fullscreen')
       const g = useGame.getState()
       if (IN_GAME.includes(g.phase) && !g.paused) {
         g.setPaused(true)
         pausedIt.current = true
       }
     } else {
-      root.classList.remove('swipe-fullscreen')
+      // stay scrolled down, where the bars stay tucked away
+      window.scrollTo(0, document.documentElement.scrollHeight)
       if (pausedIt.current) {
         pausedIt.current = false
         useGame.getState().setPaused(false)
