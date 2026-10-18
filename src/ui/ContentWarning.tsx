@@ -1,7 +1,7 @@
 import { useGame } from '../store'
 import s from './screens.module.css'
 
-import { isTouch } from '../systems/device'
+import { isIOS, isStandalone, isTouch } from '../systems/device'
 
 export function ContentWarning() {
   const setPhase = useGame((st) => st.setPhase)
@@ -18,6 +18,7 @@ export function ContentWarning() {
         <p className={s.small}>
           On a phone: play it sideways. Left thumb to walk (push all the way to run), drag on the right to look, and tap the
           prompts on screen.
+          {isIOS && !isStandalone && ' For full screen on iPhone: tap Share, then Add to Home Screen, and open it from there.'}
         </p>
       )}
       <button className={s.primary} onClick={() => setPhase('title')}>
