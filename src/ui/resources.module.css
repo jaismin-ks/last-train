@@ -1,0 +1,40 @@
+/* Resources: calm, readable, scannable. Emergency first, then the services in cards. */
+.page { position: fixed; inset: 0; overflow-y: auto; background: #000; color: var(--text); padding: clamp(40px, 8vh, 80px) 20px 64px; animation: fade 1.2s ease both; }
+.inner { width: min(860px, 100%); margin: 0 auto; display: grid; gap: 40px; }
+
+.header { text-align: center; display: grid; gap: 14px; justify-items: center; }
+.title { font-family: var(--font-display); font-weight: 400; font-size: clamp(40px, 6vw, 64px); line-height: 1; }
+.lede { font-family: var(--font-display); font-style: italic; font-size: clamp(17px, 1.8vw, 21px); color: var(--text-dim); max-width: 520px; line-height: 1.45; }
+
+/* in danger right now: first thing after the welcome */
+.emergency {
+  justify-self: center; display: flex; align-items: center; gap: 12px;
+  padding: 12px 18px; border: 1px solid rgba(232, 236, 233, 0.18);
+  font-size: 13px; letter-spacing: 0.03em; line-height: 1.5; text-align: left;
+}
+.dot { width: 6px; height: 6px; border-radius: 50%; background: #b8322a; flex: none; }
+
+.groups { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; }
+@media (min-width: 720px) { .groups { grid-template-columns: repeat(2, minmax(0, 1fr)); } } /* four groups: a balanced 2 × 2 */
+.group { border: 1px solid rgba(232, 236, 233, 0.1); padding: 22px 22px 6px; display: grid; align-content: start; }
+.groupTitle { font-family: var(--font-ui); font-size: 10.5px; font-weight: 400; letter-spacing: 0.3em; text-transform: uppercase; color: var(--text-dim); margin-bottom: 6px; }
+
+.item { display: grid; gap: 5px; padding: 14px 0; border-top: 1px solid rgba(232, 236, 233, 0.07); }
+.item:first-of-type { border-top: 0; }
+.name { font-family: var(--font-display); font-size: 20px; line-height: 1.2; color: var(--text); text-decoration: none; justify-self: start; }
+.name:hover, .name:focus-visible { text-decoration: underline; text-underline-offset: 4px; outline: none; }
+.contact { font-size: 14px; letter-spacing: 0.02em; color: var(--text); text-decoration: none; justify-self: start; }
+a.contact:hover, a.contact:focus-visible { text-decoration: underline; text-underline-offset: 4px; outline: none; }
+.note { font-size: 12px; line-height: 1.5; color: var(--text-dim); }
+
+.support { width: min(560px, 100%); justify-self: center; text-align: center; }
+
+.nav { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; }
+.navButton {
+  padding: 13px 28px; background: transparent; color: var(--text); border: 1px solid rgba(232, 236, 233, 0.35);
+  font-family: var(--font-ui); font-size: 11px; letter-spacing: 0.25em; text-transform: uppercase; transition: background 0.25s, color 0.25s;
+}
+.navButton:hover, .navButton:focus-visible { background: var(--text); color: #000; outline: none; }
+.quiet { border-color: rgba(232, 236, 233, 0.15); color: var(--text-dim); }
+
+@keyframes fade { from { opacity: 0 } to { opacity: 1 } }
