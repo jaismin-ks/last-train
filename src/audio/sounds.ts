@@ -236,15 +236,20 @@ export function setHeartbeat(on: boolean) {
  * The train. Arrival is shaped in ffmpeg: ~15 s of faint far-off rumble, then
  * it builds as the train comes in, stopping at ~29 s.
  */
-const trainArrive = sfx('train-arrive', 0.9)
+const TRAIN_ARRIVE_VOLUME = 0.9
+const trainArrive = sfx('train-arrive', TRAIN_ARRIVE_VOLUME)
 const trainDoors = sfx('train-doors', 0.7)
 const trainChime = sfx('train-chime', 0.6)
 export const TRAIN_ARRIVE_STOPS_AT = 29 // seconds into the arrival sound when the train has stopped
+/** How long the train coming in takes to fade up from silence (ms): it starts partway into the recording. */
+const TRAIN_ARRIVE_FADE_IN = 4000
 /** The train coming in; `from` skips into the recording (seconds) to shorten the wait. */
 export const playTrainArrive = (from = 0) => {
   captionSound('trainFar', 5)
   const id = trainArrive.play()
   if (from > 0) trainArrive.seek(from, id)
+  trainArrive.volume(0, id)
+  trainArrive.fade(0, TRAIN_ARRIVE_VOLUME, TRAIN_ARRIVE_FADE_IN, id) // eases in, never a hard start
   return id
 }
 export const playTrainDoors = () => {

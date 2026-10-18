@@ -12,10 +12,14 @@ import {
 } from '../data/phoneScreens'
 import { Phone, type ScreenPointer } from '../components/Phone'
 import { createTypingScreen } from '../components/typingScreen'
+import { isTouch } from '../systems/device'
 import { useGame } from '../store'
 import { CAPTIONS } from '../data/captions'
 import { playKeyTap, playLowBattery, playMessageIn, playMessageOut } from '../audio/sounds'
 import { DESCENT } from '../data/street'
+
+/** Pinch to zoom on phones: how far in (x), and how far the view can slide around while zoomed (metres). */
+const ZOOM = { max: 2.5, panLimit: 0.07 }
 
 /** The phone sits this far in front of the camera at this field of view. */
 const PHONE_DISTANCE = 0.32
@@ -50,6 +54,42 @@ export function PhoneIntro() {
   const endStart = useRef<number | null>(null)
   const skipped = useRef(false)
   const follow = useRef<Group>(null)
+  // phones: two fingers pinch to zoom and move to pan (one finger still taps and swipes the phone)
+  const zoom = useRef({ k: 1, x: 0, y: 0 })
+  useEffect(() => {
+    if (!isTouch) return
+    let start: { dist: number; k: number; mx: number; my: number; x: number; y: number } | null = null
+    const mid = (t: TouchList) => ({ x: (t[0].clientX + t[1].clientX) / 2, y: (t[0].clientY + t[1].clientY) / 2 })
+    const span = (t: TouchList) => Math.hypot(t[0].clientX - t[1].clientX, t[0].clientY - t[1].clientY)
+    const onStart = (e: TouchEvent) => {
+      if (e.touches.length !== 2) return
+      const m = mid(e.touches)
+      start = { dist: span(e.touches), k: zoom.current.k, mx: m.x, my: m.y, x: zoom.current.x, y: zoom.current.y }
+    }
+    const onMove = (e: TouchEvent) => {
+      if (!start || e.touches.length !== 2) return
+      e.preventDefault()
+      const z = zoom.current
+      z.k = MathUtils.clamp((start.k * span(e.touches)) / start.dist, 1, ZOOM.max)
+      // pan: screen pixels to metres at the phone's distance, so it follows the fingers
+      const m = mid(e.touches)
+      const perPx = (2 * PHONE_DISTANCE * Math.tan(MathUtils.degToRad(PHONE_FOV / 2))) / z.k / innerHeight
+      const lim = ZOOM.panLimit * (z.k - 1)
+      z.x = MathUtils.clamp(start.x - (m.x - start.mx) * perPx, -lim, lim)
+      z.y = MathUtils.clamp(start.y + (m.y - start.my) * perPx, -lim, lim)
+    }
+    const onEnd = (e: TouchEvent) => {
+      if (e.touches.length < 2) start = null
+    }
+    window.addEventListener('touchstart', onStart, { passive: true })
+    window.addEventListener('touchmove', onMove, { passive: false })
+    window.addEventListener('touchend', onEnd, { passive: true })
+    return () => {
+      window.removeEventListener('touchstart', onStart)
+      window.removeEventListener('touchmove', onMove)
+      window.removeEventListener('touchend', onEnd)
+    }
+  }, [])
   // idle → typing (letters appear) → typed (full message + send button, waiting for a tap)
   const [typing, setTyping] = useState<'idle' | 'typing' | 'typed'>('idle')
   const swipeStart = useRef<number | null>(null)
@@ -101,7 +141,11 @@ export function PhoneIntro() {
       const d = PHONE_DISTANCE * Math.tan(MathUtils.degToRad(PHONE_FOV / 2)) / Math.tan(MathUtils.degToRad(fov / 2))
       follow.current.position.copy(camera.position)
       follow.current.quaternion.copy(camera.quaternion)
-      follow.current.translateZ(-d)
+      // zoomed in (phones): closer, slid to where the fingers moved it
+      const z = zoom.current
+      follow.current.translateX(-z.x)
+      follow.current.translateY(-z.y)
+      follow.current.translateZ(-d / z.k)
     }
 
     const a = step.advance

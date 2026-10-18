@@ -61,7 +61,7 @@ export function Ending() {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.repeat || e.code === 'Escape' || e.code === 'Tab') return
-      if (step >= 0 && !leaving) next()
+      if (step >= 1 && !leaving) next() // not on the phone: it plays out by itself
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
@@ -70,8 +70,9 @@ export function Ending() {
   const style = { ['--fade' as string]: `${ENDING.fade}s` }
   const screen = step >= 1 ? (screens[step - 1] as (typeof ENDING.screens)[number]) : null
 
+  // the phone plays out by itself (people tap it without meaning to skip); the lines after can be tapped on
   return (
-    <main className={s.ending} style={style} onClick={() => step >= 0 && !leaving && next()}>
+    <main className={s.ending} style={style} onClick={() => step >= 1 && !leaving && next()}>
       {step === 0 && <TextHome typedText={kind.typed} send={kind.send} jess={kind.jess} leaving={leaving} onDone={next} />}
       {screen && (
         <div key={step} className={`${s.step} ${leaving ? s.leaving : ''}`}>

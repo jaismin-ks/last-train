@@ -146,7 +146,7 @@ export const STATIONS = {
   doorReach: 0.75,
   doorSideX: -72.7,
   /** ...and you're carried out to here on the platform (x). */
-  stepOutX: -69.6,
+  stepOutX: -70.55, // about 1.2 m onto the platform: clear of the stairs and walls behind the edge
   /** Doors open while you're facing away from them: you turn toward them for this long (seconds), then it's your view again. */
   turnToDoors: 1.4,
   /** While the doors are open you can walk this far into a doorway (x). */
@@ -159,8 +159,8 @@ export const STATIONS = {
    */
   /**
    * Getting off at your stop: you step out, turn back to the train, the chime
-   * and the doors close, and it pulls away with him at the window beside your
-   * door (seconds; the door glass is opaque, the side windows aren't).
+   * and the doors close, and it pulls away with him still inside, wherever he
+   * was (seconds; windowX / windowAlong: where you turn to look).
    */
   lastStop: { turnAt: 1.3, chimeAt: 2.2, doorsAt: 2.8, leaveAt: 4.0, cutAt: 10.5, windowX: -72.55, windowAlong: 2.5 },
   follow: { appear: 0.6, turnAt: 1.4, fromX: -72.3, outX: -70.4, stepSpeed: 0.9, walkSpeed: 0.8, stopAt: 2.2, hold: 1.8, maxTime: 14 },

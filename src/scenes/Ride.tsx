@@ -297,6 +297,7 @@ export function Ride() {
     stoodAt: 0, // getting off early: when he stopped in front of you on the platform
     lookUntil: 0, // doors just opened behind you: you turn toward them until then
     passedAt: 0, // when the train cleared Ashdale
+    figRideZ: 0, // your stop: where he was when the doors closed (he leaves with the train)
     prevX: 0, // your x last frame (walking toward a door?)
     countdown: 0,
   })
@@ -819,7 +820,11 @@ export function Ride() {
           if (seat.active) seat.active = false
           game.setEndingKind(lastStation ? 'ambiguous' : 'followed')
           // out through the middle of the door, a couple of steps onto the platform, facing the wall
-          Object.assign(autoWalk, { active: true, x: STATIONS.stepOutX, z: door.z, speed: 1.5, face: Math.PI / 2 })
+          // looking along the platform (toward the next door, where he'd come out), not straight at its wall
+          const along = Math.sign(
+            (trainDoorCenters.filter((d) => Math.abs(d.z - door.z) > 2).sort((a, b) => Math.abs(a.z - door.z) - Math.abs(b.z - door.z))[0]?.z ?? door.z + 1) - door.z,
+          ) || 1
+          Object.assign(autoWalk, { active: true, x: STATIONS.stepOutX, z: door.z, speed: 1.5, face: Math.atan2(0.45, along) })
           s.exitDoorZ = door.z
           s.lookUntil = 0
           go('exit')
@@ -882,7 +887,7 @@ export function Ride() {
           // you turn and keep him in view
           if (s.said.has('follows') && t > F.turnAt) autoWalk.face = Math.atan2(fig.position.x - me.x, fig.position.z - me.z)
         }
-        // your stop: turn back to the train; the doors close and it pulls away, him at the door window
+        // your stop: turn back to the train; the doors close and it pulls away, taking him with it from wherever he is
         const L = STATIONS.lastStop
         if (!followed) {
           const windowZ = s.exitDoorZ + L.windowAlong
@@ -893,14 +898,12 @@ export function Ride() {
               game.setTrainDoorsOpen(false)
               playTrainDoors()
               if (fig) {
-                stopWalking(fig)
-                fig.position.set(L.windowX, R.area.floorY, windowZ)
-                fig.userData.eyesOpen = true
-                fig.visible = true
+                stopWalking(fig) // he stays where he is in the carriage
+                s.figRideZ = fig.position.z
               }
             })
           if (t > L.leaveAt) once('leaves', () => game.setTrainState('leaving'))
-          if (fig && s.said.has('lastDoors')) fig.position.z = windowZ + trainLeave.z // he rides away with it
+          if (fig && s.said.has('lastDoors')) fig.position.z = s.figRideZ + trainLeave.z // he rides away with it
         }
         // on the platform, then black, the chime ringing over silence (followed: once he's stood facing you a moment)
         const over = followed ? (s.stoodAt > 0 && now - s.stoodAt > F.hold) || t > F.maxTime : t > L.cutAt
