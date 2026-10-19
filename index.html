@@ -10,23 +10,62 @@
     <meta name="apple-mobile-web-app-title" content="Last Train" />
     <link rel="manifest" href="/manifest.webmanifest" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
-    <meta name="description" content="Last Train — an interactive short film about being alone at night." />
+    <title>Last Train — an interactive short film you play in your browser</title>
+    <meta name="description" content="Real-life situational horror. It's past midnight, you're on the last train home, and you're being followed. A free 5-minute interactive short film for phone or desktop." />
+    <link rel="canonical" href="https://www.last-train.online/" />
+    <meta name="author" content="Jaismin" />
     <meta name="theme-color" content="#000000" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <!-- how the link looks when it's shared (LinkedIn, iMessage, Discord, X...) -->
     <meta property="og:type" content="website" />
-    <meta property="og:title" content="Last Train" />
-    <meta property="og:description" content="An interactive short film about being alone at night. Text me when you get home." />
-    <meta name="twitter:card" content="summary" />
+    <meta property="og:site_name" content="Last Train" />
+    <meta property="og:url" content="https://www.last-train.online/" />
+    <meta property="og:title" content="Last Train — an interactive short film" />
+    <meta property="og:description" content="It's past midnight, you're on the last train home, and you're being followed. 5 minutes, in your browser." />
+    <meta property="og:image" content="https://www.last-train.online/og-image.jpg" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="An empty subway platform at night under dim green lights, the tracks running into a dark tunnel, with the title Last Train" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Last Train — an interactive short film" />
+    <meta name="twitter:description" content="It's past midnight, you're on the last train home, and you're being followed. 5 minutes, in your browser." />
+    <meta name="twitter:image" content="https://www.last-train.online/og-image.jpg" />
+    <!-- what it is, for search engines -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "VideoGame",
+        "name": "Last Train",
+        "url": "https://www.last-train.online/",
+        "description": "An interactive short film about getting home safe at night: it's past midnight, you're on the last train home, and you're being followed.",
+        "image": "https://www.last-train.online/og-image.jpg",
+        "author": { "@type": "Person", "name": "Jaismin" },
+        "genre": ["Interactive fiction", "Horror"],
+        "gamePlatform": ["Web browser", "Mobile web browser"],
+        "applicationCategory": "Game",
+        "inLanguage": "en",
+        "isAccessibleForFree": true,
+        "contentRating": "Content warning: fear, stalking and themes of sexual violence"
+      }
+    </script>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
       href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500&family=Newsreader:ital,opsz,wght@0,6..72,300..600;1,6..72,300..600&display=swap"
       rel="stylesheet"
     />
-    <title>Last Train</title>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <main style="position:fixed;inset:0;display:grid;place-content:center;gap:14px;padding:32px;background:#000;color:#8e958f;text-align:center;font-family:Newsreader,Georgia,serif">
+        <h1 style="margin:0;font-weight:300;font-style:italic;font-size:28px">Last Train</h1>
+        <p style="margin:0;max-width:440px;font-size:14px;line-height:1.6;color:#5d635f">
+          An interactive short film you play in your browser. It's past midnight, you're on the last train home, and
+          you're being followed. About 5 minutes, on phone or desktop. Content warning: fear, stalking and themes of
+          sexual violence.
+        </p>
+      </main>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
